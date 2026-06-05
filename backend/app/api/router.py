@@ -1,0 +1,9 @@
+from fastapi import APIRouter
+
+from app.api.routes import agents, events, tickets
+
+api_router = APIRouter()
+
+api_router.include_router(tickets.router, prefix="/tickets", tags=["tickets"])
+api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
+api_router.include_router(events.router, prefix="/events", tags=["events"])
