@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useWorkspace } from "@/lib/workspace";
 import { useTickets } from "@/lib/hooks";
 import { TicketRow } from "@/components/tickets/TicketRow";
@@ -28,6 +29,18 @@ export default function TicketsPage() {
         <div className="flex items-center gap-3">
           <span className="text-xs text-text-muted">{filtered.length} tickets</span>
           {isLoading && <Spinner />}
+          <Link
+            href="/tickets/import"
+            className="px-3 py-1.5 rounded-lg text-sm border border-border-default text-text-muted hover:text-text-primary hover:border-gray-500 transition-colors"
+          >
+            Import
+          </Link>
+          <Link
+            href="/tickets/new"
+            className="px-3 py-1.5 rounded-lg text-sm bg-cyan-brand text-bg font-semibold hover:bg-cyan-brand/90 transition-colors"
+          >
+            New Ticket
+          </Link>
         </div>
       </div>
 

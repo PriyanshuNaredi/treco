@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, Literal
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -27,6 +28,28 @@ class CreateTicketRequest(BaseModel):
     acceptance_criteria: list[str] = []
 
 
+class FetchGitHubIssueRequest(BaseModel):
+    workspace_id: str
+    repo: str
+    issue_number: int
+    token: str
+
+
+class FetchLinearIssueRequest(BaseModel):
+    workspace_id: str
+    issue_id: str
+    api_key: str
+
+
+class BulkImportRequest(BaseModel):
+    workspace_id: str
+    source: Literal["github", "linear"]
+    token: str
+    repo: str | None = None
+    team_key: str | None = None
+    limit: int = 20
+
+
 class TicketResponse(BaseModel):
     id: str
     source: str
@@ -39,6 +62,51 @@ class TicketResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+async def _upsert_ticket(
+    db: AsyncSession,
+    workspace_id: str,
+    source: str,
+    source_id: str,
+    title: str,
+    description: str | None,
+    status: str,
+    body: dict,
+) -> Ticket:
+    result = await db.execute(
+        select(Ticket).where(
+            Ticket.workspace_id == workspace_id,
+            Ticket.source == source,
+            Ticket.source_id == source_id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        existing.title = title
+        existing.description = description
+        existing.status = status
+        existing.body = body
+        await db.commit()
+        await db.refresh(existing)
+        return existing
+
+    criteria = await extract_criteria(title, description)
+    ticket = Ticket(
+        id=str(uuid.uuid4()),
+        workspace_id=workspace_id,
+        source=source,
+        source_id=source_id,
+        title=title,
+        description=description,
+        status=status,
+        body=body,
+        acceptance_criteria=criteria,
+    )
+    db.add(ticket)
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket
 
 
 @router.post("/import", response_model=TicketResponse)
@@ -65,6 +133,135 @@ async def import_ticket(req: ImportTicketRequest, db: AsyncSession = Depends(get
     await db.commit()
     await db.refresh(ticket)
     return ticket
+
+
+@router.post("/fetch/github", response_model=TicketResponse)
+async def fetch_github_issue(req: FetchGitHubIssueRequest, db: AsyncSession = Depends(get_db)):
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            f"https://api.github.com/repos/{req.repo}/issues/{req.issue_number}",
+            headers={
+                "Authorization": f"token {req.token}",
+                "Accept": "application/vnd.github.v3+json",
+            },
+        )
+        if r.status_code == 404:
+            raise HTTPException(status_code=404, detail="Issue not found")
+        r.raise_for_status()
+
+    raw = r.json()
+    adapter = ADAPTERS["github"]
+    normalized = adapter.normalize(raw)
+    return await _upsert_ticket(
+        db,
+        req.workspace_id,
+        normalized.source,
+        normalized.source_id,
+        normalized.title,
+        normalized.description,
+        normalized.status,
+        normalized.body,
+    )
+
+
+@router.post("/fetch/linear", response_model=TicketResponse)
+async def fetch_linear_issue(req: FetchLinearIssueRequest, db: AsyncSession = Depends(get_db)):
+    query = """
+        query($id: String!) {
+            issue(id: $id) {
+                identifier
+                title
+                description
+                state { name }
+            }
+        }
+    """
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            "https://api.linear.app/graphql",
+            json={"query": query, "variables": {"id": req.issue_id}},
+            headers={"Authorization": req.api_key, "Content-Type": "application/json"},
+        )
+        r.raise_for_status()
+
+    data = r.json()
+    issue = (data.get("data") or {}).get("issue")
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+
+    adapter = ADAPTERS["linear"]
+    normalized = adapter.normalize(issue)
+    return await _upsert_ticket(
+        db,
+        req.workspace_id,
+        normalized.source,
+        normalized.source_id,
+        normalized.title,
+        normalized.description,
+        normalized.status,
+        normalized.body,
+    )
+
+
+@router.post("/fetch/bulk", response_model=list[TicketResponse])
+async def bulk_import(req: BulkImportRequest, db: AsyncSession = Depends(get_db)):
+    if req.source == "github":
+        if not req.repo:
+            raise HTTPException(status_code=400, detail="repo is required for GitHub bulk import")
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"https://api.github.com/repos/{req.repo}/issues",
+                params={"state": "open", "per_page": req.limit},
+                headers={
+                    "Authorization": f"token {req.token}",
+                    "Accept": "application/vnd.github.v3+json",
+                },
+            )
+            r.raise_for_status()
+        raw_issues = r.json()
+        adapter = ADAPTERS["github"]
+        normalized_list = [adapter.normalize(raw) for raw in raw_issues]
+
+    else:
+        team_filter = f'(filter: {{ team: {{ key: {{ eq: "{req.team_key}" }} }} }})' if req.team_key else ""
+        query = f"""
+            query {{
+                issues{team_filter} {{
+                    nodes {{
+                        identifier
+                        title
+                        description
+                        state {{ name }}
+                    }}
+                }}
+            }}
+        """
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                "https://api.linear.app/graphql",
+                json={"query": query},
+                headers={"Authorization": req.token, "Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+        nodes = ((r.json().get("data") or {}).get("issues") or {}).get("nodes", [])
+        nodes = nodes[: req.limit]
+        adapter = ADAPTERS["linear"]
+        normalized_list = [adapter.normalize(n) for n in nodes]
+
+    tickets: list[Ticket] = []
+    for norm in normalized_list:
+        ticket = await _upsert_ticket(
+            db,
+            req.workspace_id,
+            norm.source,
+            norm.source_id,
+            norm.title,
+            norm.description,
+            norm.status,
+            norm.body,
+        )
+        tickets.append(ticket)
+    return tickets
 
 
 @router.post("/", response_model=TicketResponse)
