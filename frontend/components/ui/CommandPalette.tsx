@@ -116,6 +116,7 @@ export function CommandPalette({ tickets = [] }: CommandPaletteProps) {
         "shadow-2xl backdrop:bg-[var(--bg)]/70 backdrop:backdrop-blur-sm",
         "animate-slide-in open:flex open:flex-col",
       )}
+      suppressHydrationWarning
       style={{ zIndex: "var(--z-modal)" }}
     >
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">

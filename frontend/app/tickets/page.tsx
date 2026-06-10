@@ -76,7 +76,7 @@ export default function TicketsPage() {
           ← Previous
         </button>
         <span className="text-xs text-text-muted">
-          {offset + 1}–{offset + tickets.length}
+          {tickets.length === 0 ? "0" : `${offset + 1}–${offset + tickets.length}`}
         </span>
         <button
           onClick={() => setOffset(offset + PAGE_SIZE)}
