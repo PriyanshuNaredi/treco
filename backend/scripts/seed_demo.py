@@ -263,7 +263,7 @@ class Seeder:
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--url", default="http://localhost:8000")
+    parser.add_argument("--url", default="http://localhost:8001")
     parser.add_argument("--workspace", default="demo")
     args = parser.parse_args()
 

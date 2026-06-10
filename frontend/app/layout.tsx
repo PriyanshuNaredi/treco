@@ -1,30 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { WorkspaceProvider } from "@/lib/workspace";
-import { StreamProvider } from "@/lib/StreamProvider";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopBar } from "@/components/layout/TopBar";
-import { CommandPaletteProvider } from "@/components/ui/CommandPaletteProvider";
 
 export const metadata: Metadata = {
-  title: "Treco",
-  description: "Real-time agent observability for your tickets",
+  title: "Treco — Real-time observability for AI agents",
+  description: "See what your AI coding agents are doing in real time. Live kanban, acceptance criteria tracking, token cost per session. Open source.",
+  openGraph: {
+    title: "Treco — Real-time observability for AI agents",
+    description: "See what your AI coding agents are doing in real time. Live kanban, acceptance criteria tracking, token cost per session. Open source.",
+    url: "https://treco.dev",
+    siteName: "Treco",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Treco — Real-time observability for AI agents",
+    description: "See what your AI coding agents are doing in real time.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="flex h-screen overflow-hidden bg-bg text-text-primary">
-        <WorkspaceProvider>
-          <StreamProvider>
-            <CommandPaletteProvider />
-            <Sidebar />
-            <div className="flex flex-col flex-1 min-w-0">
-              <TopBar />
-              <main className="flex-1 overflow-y-auto p-6">{children}</main>
-            </div>
-          </StreamProvider>
-        </WorkspaceProvider>
+      <body className="bg-[var(--bg)] text-[var(--text)]">
+        {children}
       </body>
     </html>
   );

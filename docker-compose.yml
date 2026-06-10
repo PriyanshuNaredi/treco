@@ -2,22 +2,25 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
-    env_file: .env
-    volumes:
-      - ./backend:/app
+      - "8001:8001"
+    env_file: backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://treco:treco@db/treco
+      DATABASE_MODE: postgres
     depends_on:
-      - db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      db:
+        condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8001
+        NEXT_PUBLIC_WORKSPACE_ID: default
     ports:
       - "3000:3000"
-    env_file: .env
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    depends_on:
+      - backend
 
   db:
     image: postgres:16-alpine
@@ -29,6 +32,11 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U treco"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pg_data:
