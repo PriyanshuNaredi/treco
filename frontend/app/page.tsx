@@ -2,25 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { useInView } from "motion/react";
 import { Leaf, ExternalLink, ArrowRight, CheckCircle2, Bot, BarChart3, Terminal, Zap } from "lucide-react";
 
 const GITHUB_URL = "https://github.com/danfranco3/treco";
 
 function FadeUp({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  const reduced = useReducedMotion();
   return (
-    <motion.div
-      ref={ref}
+    <div
       className={className}
-      initial={reduced ? false : { opacity: 0, y: 24 }}
-      animate={inView ? { opacity: 1, y: 0 } : undefined}
-      transition={{ duration: 0.45, ease: "easeOut", delay }}
+      style={{
+        animation: `fadeUp 0.5s ease-out ${delay}s both`,
+      }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -100,8 +96,6 @@ const FEATURES = [
 const WORKS_WITH = ["Claude Code", "Cursor", "LangChain", "CrewAI", "AutoGen", "Any HTTP agent"];
 
 export default function LandingPage() {
-  const reduced = useReducedMotion();
-
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
 
@@ -132,11 +126,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="pt-36 pb-20 px-6 max-w-5xl mx-auto">
-        <motion.div
-          initial={reduced ? false : { opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        >
+        <div style={{ animation: "fadeUp 0.5s ease-out 0s both" }}>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--green)]/30 bg-[var(--green-3)] text-[var(--green)] text-xs font-medium mb-8">
             <span className="relative flex h-1.5 w-1.5">
               <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-[var(--green)] opacity-75" />
@@ -166,7 +156,7 @@ export default function LandingPage() {
               View live demo
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         <FadeUp className="mt-16" delay={0.15}>
           <TerminalBlock />
