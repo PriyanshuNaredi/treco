@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Ticket, Bot, ChevronLeft, ChevronRight, Menu, X, Leaf } from "lucide-react";
+import { LayoutDashboard, Ticket, Bot, Settings, ChevronLeft, ChevronRight, Menu, X, Leaf } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/tickets",   label: "Tickets",   Icon: Ticket },
   { href: "/agents",    label: "Agents",    Icon: Bot },
+];
+
+const NAV_BOTTOM = [
+  { href: "/settings",  label: "Settings",  Icon: Settings },
 ];
 
 interface SidebarProps {
@@ -100,6 +104,34 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           </ul>
         </nav>
 
+        {/* Bottom nav */}
+        <div className={cn("pb-2", collapsed ? "px-2" : "px-3")}>
+          <ul className="space-y-0.5">
+            {NAV_BOTTOM.map((item) => {
+              const active = path.startsWith(item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "flex items-center rounded-lg text-sm transition-colors duration-150",
+                      collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2",
+                      active
+                        ? "bg-[var(--green-3)] text-[var(--green)] font-medium"
+                        : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
+                    )}
+                  >
+                    <item.Icon className="w-4 h-4 flex-shrink-0" />
+                    {!collapsed && item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
         {/* Footer */}
         <div className={cn(
           "border-t border-[var(--border)] flex items-center",
@@ -108,7 +140,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           {!collapsed && (
             <div>
               <p className="text-[var(--text-3)] text-xs">v0.1.0 · open source</p>
-              <p className="text-[var(--text-3)] text-xs font-mono">⌘K to search</p>
             </div>
           )}
           {onToggle && (

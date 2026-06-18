@@ -34,6 +34,13 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function del(path: string): Promise<void> {
+  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`API ${res.status}: ${await res.text()}`);
+  }
+}
+
 export interface CreateTicketRequest {
   workspace_id?: string;
   title: string;
@@ -133,6 +140,14 @@ export const fetchWorkspace = (workspaceId: string): Promise<Workspace> =>
 
 export const createWorkspace = (data: { name: string; repo_path: string }): Promise<Workspace> =>
   post("/workspaces", data);
+
+export const updateWorkspace = (
+  workspaceId: string,
+  data: { name?: string; repo_path?: string }
+): Promise<Workspace> => patch(`/workspaces/${workspaceId}`, data);
+
+export const deleteWorkspace = (workspaceId: string): Promise<void> =>
+  del(`/workspaces/${workspaceId}`);
 
 export interface FsEntry {
   name: string;
