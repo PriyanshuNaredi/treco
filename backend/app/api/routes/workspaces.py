@@ -51,7 +51,7 @@ def _validate_git_repo(repo_path: str) -> Path:
     return path
 
 
-@router.post("/", response_model=WorkspaceResponse)
+@router.post("", response_model=WorkspaceResponse)
 async def create_workspace(req: CreateWorkspaceRequest, db: AsyncSession = Depends(get_db)):
     resolved = _validate_git_repo(req.repo_path)
 
@@ -66,7 +66,7 @@ async def create_workspace(req: CreateWorkspaceRequest, db: AsyncSession = Depen
     return workspace
 
 
-@router.get("/", response_model=list[WorkspaceResponse])
+@router.get("", response_model=list[WorkspaceResponse])
 async def list_workspaces(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Workspace).order_by(Workspace.created_at))
     return result.scalars().all()

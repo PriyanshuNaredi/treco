@@ -53,7 +53,7 @@ class CostSummary(BaseModel):
     event_count: int
 
 
-@router.post("/")
+@router.post("")
 async def post_event(
     req: EventRequest,
     x_agent_key: str = Header(..., alias="X-Agent-Key"),
@@ -153,7 +153,7 @@ async def get_agent_events(
     return result.scalars().all()
 
 
-@router.get("/", response_model=list[EventResponse])
+@router.get("", response_model=list[EventResponse])
 async def list_workspace_events(
     workspace_id: str,
     limit: int = 100,

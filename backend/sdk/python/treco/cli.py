@@ -452,6 +452,10 @@ def cmd_connect_github():
     base_url = cfg.get("base_url") or os.environ.get("TRECO_URL", "http://localhost:8001")
     workspace_id = _workspace_id()
 
+    if not cfg.get("github_token"):
+        print("Create a GitHub PAT with 'repo' scope:")
+        print("  https://github.com/settings/tokens/new?scopes=repo&description=Treco")
+        print()
     token = cfg.get("github_token") or getpass.getpass("GitHub Personal Access Token: ").strip()
     if not token:
         print("Token required.", file=sys.stderr)

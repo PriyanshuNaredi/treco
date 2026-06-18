@@ -39,7 +39,7 @@ class CreateAgentResponse(AgentResponse):
     api_key: str  # returned only on creation, never again
 
 
-@router.post("/", response_model=CreateAgentResponse)
+@router.post("", response_model=CreateAgentResponse)
 async def create_agent(req: CreateAgentRequest, db: AsyncSession = Depends(get_db)):
     raw_key, key_hash = generate_api_key()
 
@@ -64,7 +64,7 @@ async def create_agent(req: CreateAgentRequest, db: AsyncSession = Depends(get_d
     )
 
 
-@router.get("/", response_model=list[AgentResponse])
+@router.get("", response_model=list[AgentResponse])
 async def list_agents(workspace_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Agent).where(Agent.workspace_id == workspace_id)
