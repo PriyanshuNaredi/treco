@@ -7,6 +7,7 @@ import { fetchTickets } from "@/lib/api";
 import { TicketRow } from "@/components/tickets/TicketRow";
 import { TicketFilter } from "@/components/tickets/TicketFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Ticket as TicketIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Card } from "@/components/ui/Card";
 
@@ -38,13 +39,13 @@ export default function TicketsPage() {
           {isLoading && <Spinner />}
           <Link
             href="/tickets/import"
-            className="px-3 py-1.5 rounded-lg text-sm border border-border-default text-text-muted hover:text-text-primary hover:border-gray-500 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm border border-border-default text-text-muted hover:text-text-primary hover:border-stone-400 transition-colors"
           >
             Import
           </Link>
           <Link
             href="/tickets/new"
-            className="px-3 py-1.5 rounded-lg text-sm bg-cyan-brand text-bg font-semibold hover:bg-cyan-brand/90 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm bg-green-brand text-bg font-semibold hover:bg-green-brand/90 transition-colors"
           >
             New Ticket
           </Link>
@@ -55,7 +56,7 @@ export default function TicketsPage() {
 
       <Card className="p-0 overflow-hidden">
         {!filtered.length ? (
-          <EmptyState icon="◈" title="No tickets found" sub="Import tickets or create one via the API" />
+          <EmptyState Icon={TicketIcon} title="No tickets found" sub="Import tickets or create one via the API" />
         ) : (
           <div className="divide-y divide-border-default">
             {filtered.map((ticket) => (

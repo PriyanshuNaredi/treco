@@ -9,20 +9,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        /* legacy aliases — kept so existing class names continue to work */
         bg:               "var(--bg)",
         surface:          "var(--surface)",
         "surface-2":      "var(--surface-2)",
         "surface-3":      "var(--surface-3)",
         "border-default": "var(--border)",
-        "cyan-brand":     "var(--cyan)",
         "green-brand":    "var(--green)",
+        "green-brand-2":  "var(--green-2)",
         "red-brand":      "var(--red)",
         "amber-brand":    "var(--amber)",
-        "purple-brand":   "var(--purple)",
+        "blue-brand":     "var(--blue)",
         "text-primary":   "var(--text)",
         "text-muted":     "var(--text-2)",
         "text-subtle":    "var(--text-3)",
+        /* legacy alias kept for backwards compat */
+        "cyan-brand":     "var(--green)",
       },
       fontFamily: {
         mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
@@ -50,6 +51,11 @@ const config: Config = {
           from: { backgroundPosition: "-200% 0" },
           to:   { backgroundPosition:  "200% 0" },
         },
+      },
+      boxShadow: {
+        card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.08), 0 1px 3px 0 rgb(0 0 0 / 0.06)",
+        modal: "0 20px 60px -10px rgb(0 0 0 / 0.15), 0 4px 16px -4px rgb(0 0 0 / 0.1)",
       },
     },
   },

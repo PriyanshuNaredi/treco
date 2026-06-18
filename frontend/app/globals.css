@@ -4,27 +4,29 @@
 @tailwind utilities;
 
 :root {
-  /* Backgrounds */
-  --bg:        oklch(0.12 0.02 255);
-  --surface:   oklch(0.17 0.02 255);
-  --surface-2: oklch(0.20 0.025 255);
-  --surface-3: oklch(0.23 0.025 255);
+  /* Backgrounds — warm paper */
+  --bg:        #fafaf9;
+  --surface:   #ffffff;
+  --surface-2: #f5f5f4;
+  --surface-3: #e7e5e4;
 
   /* Borders */
-  --border:       oklch(0.28 0.02 255);
-  --border-focus: oklch(0.55 0.15 220);
+  --border:       #e7e5e4;
+  --border-focus: #16a34a;
 
-  /* Text — all pass 4.5:1 on --surface */
-  --text:   oklch(0.97 0.005 255);
-  --text-2: oklch(0.72 0.01 255);
-  --text-3: oklch(0.52 0.01 255);
+  /* Text — stone scale */
+  --text:   #1c1917;
+  --text-2: #57534e;
+  --text-3: #a8a29e;
 
-  /* Semantic accents */
-  --cyan:   oklch(0.68 0.14 220);
-  --green:  oklch(0.70 0.14 160);
-  --red:    oklch(0.60 0.20  25);
-  --amber:  oklch(0.76 0.16  75);
-  --purple: oklch(0.63 0.18 295);
+  /* Accents */
+  --green:  #16a34a;
+  --green-2: #15803d;
+  --green-3: #dcfce7;
+  --red:    #dc2626;
+  --amber:  #d97706;
+  --blue:   #2563eb;
+  --purple: #7c3aed;
 
   /* Z-index scale */
   --z-dropdown: 100;
@@ -43,14 +45,13 @@ html, body {
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: oklch(0.35 0.02 255); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.42 0.02 255); }
+::-webkit-scrollbar-track { background: var(--surface-2); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #d6d3d1; }
 
 /* ── Animations ─────────────────────────────────────────────────── */
 
 @keyframes border-pulse {
-  /* indicator bar only — no glow */
   0%, 100% { opacity: 0.35; }
   50%       { opacity: 1; }
 }
@@ -70,7 +71,6 @@ html, body {
   to   { background-position:  200% 0; }
 }
 
-/* keep .agent-working for backwards compat but strip glow */
 .agent-working {
   animation: border-pulse 2.2s ease-in-out infinite;
 }
@@ -108,16 +108,29 @@ html, body {
   .btn {
     @apply inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium
            transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-[var(--green)] focus-visible:ring-offset-1
            disabled:opacity-40 disabled:cursor-not-allowed;
   }
-  .btn-primary   { @apply btn bg-[var(--cyan)] text-[var(--bg)] hover:opacity-90; }
-  .btn-secondary {
-    @apply btn border border-[var(--border)] text-[var(--text-2)]
-           hover:text-[var(--text)];
+  .btn-primary {
+    @apply btn bg-[var(--green)] text-white hover:bg-[var(--green-2)];
   }
-  .btn-ghost { @apply btn text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-3)]; }
+  .btn-secondary {
+    @apply btn border border-[var(--border)] text-[var(--text-2)] bg-white
+           hover:text-[var(--text)] hover:bg-[var(--surface-2)];
+  }
+  .btn-ghost {
+    @apply btn text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-2)];
+  }
 
   .code-chip {
-    @apply font-mono bg-[var(--surface-2)] px-1.5 py-0.5 rounded text-[var(--cyan)] text-xs;
+    @apply font-mono bg-[var(--surface-2)] px-1.5 py-0.5 rounded text-[var(--green)] text-xs
+           border border-[var(--border)];
+  }
+
+  .input {
+    @apply bg-white border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm
+           text-[var(--text)] placeholder:text-[var(--text-3)]
+           focus:outline-none focus:border-[var(--green)]
+           transition-colors;
   }
 }

@@ -1,8 +1,9 @@
-import type { Agent, AgentEvent, Ticket } from "@/lib/types";
+import { Bot, Ticket, CheckCircle2, Sparkles } from "lucide-react";
+import type { Agent, AgentEvent, Ticket as TicketType } from "@/lib/types";
 
 interface StatBarProps {
   agents: Agent[];
-  tickets: Ticket[];
+  tickets: TicketType[];
   events: AgentEvent[];
 }
 
@@ -18,20 +19,24 @@ export function StatBar({ agents, tickets, events }: StatBarProps) {
   ).length;
 
   const stats = [
-    { icon: "◎", value: activeAgents, label: "active" },
-    { icon: "◈", value: openTickets,  label: "open" },
-    { icon: "✓", value: doneTickets,  label: "done" },
-    { icon: "⬡", value: criteriaToday, label: "criteria today" },
+    { Icon: Bot,          value: activeAgents,  label: "active agents" },
+    { Icon: Ticket,       value: openTickets,   label: "open tickets" },
+    { Icon: CheckCircle2, value: doneTickets,   label: "done" },
+    { Icon: Sparkles,     value: criteriaToday, label: "criteria today" },
   ];
 
   return (
-    <div className="flex flex-wrap gap-x-6 gap-y-2 items-center px-4 py-2 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
-      {stats.map((s, i) => (
-        <span key={s.label} className="flex items-center gap-2">
-          {i > 0 && <span className="text-[var(--border)] select-none hidden sm:inline">·</span>}
-          <span className="font-mono text-sm text-[var(--cyan)]">{s.icon} {s.value}</span>
-          <span className="text-xs text-[var(--text-2)]">{s.label}</span>
-        </span>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {stats.map((s) => (
+        <div key={s.label} className="flex items-center gap-3 bg-white border border-[var(--border)] rounded-xl px-4 py-3 shadow-card">
+          <div className="w-8 h-8 rounded-lg bg-[var(--green-3)] flex items-center justify-center flex-shrink-0">
+            <s.Icon className="w-4 h-4 text-[var(--green)]" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-[var(--text)] leading-none">{s.value}</p>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{s.label}</p>
+          </div>
+        </div>
       ))}
     </div>
   );

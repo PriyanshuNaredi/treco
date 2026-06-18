@@ -8,10 +8,11 @@ interface CriteriaChecklistProps {
 
 import { CriterionItem } from "./CriterionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ListChecks } from "lucide-react";
 
 export function CriteriaChecklist({ criteria, events, agentNames }: CriteriaChecklistProps) {
   if (!criteria.length) {
-    return <EmptyState icon="◈" title="No acceptance criteria" sub="Add criteria to the ticket or use LLM extraction" />;
+    return <EmptyState Icon={ListChecks} title="No acceptance criteria" sub="Add criteria to the ticket or use LLM extraction" />;
   }
 
   const checkedMap: Record<string, { agentId: string; at: string }> = {};

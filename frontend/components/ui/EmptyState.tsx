@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
+import { Bot, Ticket, Inbox, type LucideIcon } from "lucide-react";
 
 interface EmptyStateProps {
-  icon?: string;
+  Icon?: LucideIcon;
   title: string;
   sub?: string;
   codeHint?: string;
@@ -9,10 +10,14 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({ icon, title, sub, codeHint, actions, className }: EmptyStateProps) {
+export function EmptyState({ Icon, title, sub, codeHint, actions, className }: EmptyStateProps) {
   return (
     <div className={cn("flex flex-col items-center justify-center py-16 text-center gap-2", className)}>
-      {icon && <span className="text-2xl text-[var(--text-3)] mb-1">{icon}</span>}
+      {Icon && (
+        <div className="w-12 h-12 rounded-xl bg-[var(--green-3)] flex items-center justify-center mb-2">
+          <Icon className="w-6 h-6 text-[var(--green)]" />
+        </div>
+      )}
       <p className="text-sm font-medium text-[var(--text-2)]">{title}</p>
       {sub && <p className="text-xs text-[var(--text-3)] max-w-xs">{sub}</p>}
       {codeHint && (
@@ -26,7 +31,7 @@ export function EmptyState({ icon, title, sub, codeHint, actions, className }: E
 export function EmptyAgents() {
   return (
     <EmptyState
-      icon="◎"
+      Icon={Bot}
       title="No agents connected yet"
       sub="Run treco init in your project to connect this workspace."
       codeHint="treco init"
@@ -37,7 +42,7 @@ export function EmptyAgents() {
 export function EmptyTickets({ onImport, onNew }: { onImport?: () => void; onNew?: () => void }) {
   return (
     <EmptyState
-      icon="◈"
+      Icon={Ticket}
       title="No tickets yet"
       sub="Import from GitHub, Linear, or Jira — or create one manually."
       actions={
@@ -61,7 +66,7 @@ export function EmptyTickets({ onImport, onNew }: { onImport?: () => void; onNew
 export function EmptyAgentIdle() {
   return (
     <EmptyState
-      icon="◎"
+      Icon={Inbox}
       title="Agent connected, waiting for a ticket"
       sub="Run treco start to assign a ticket to this agent."
       codeHint="treco start"

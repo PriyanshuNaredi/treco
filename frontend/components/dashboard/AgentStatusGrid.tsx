@@ -1,6 +1,7 @@
 import type { Agent, AgentEvent, Ticket } from "@/lib/types";
 import { AgentMiniCard } from "./AgentMiniCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Bot } from "lucide-react";
 import { toMap } from "@/lib/utils";
 
 const DEVIATION_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
@@ -13,7 +14,7 @@ interface AgentStatusGridProps {
 
 export function AgentStatusGrid({ agents, tickets, events = [] }: AgentStatusGridProps) {
   if (!agents.length) {
-    return <EmptyState icon="◎" title="No agents registered" sub="Create an agent via the API to get started" />;
+    return <EmptyState Icon={Bot} title="No agents registered" sub="Create an agent via the API to get started" />;
   }
 
   const ticketMap = toMap(tickets);

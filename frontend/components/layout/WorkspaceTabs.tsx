@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { useAgents } from "@/lib/hooks";
 import type { Workspace } from "@/lib/types";
@@ -15,13 +16,13 @@ function WorkspaceTab({ workspace, active, onClick }: { workspace: Workspace; ac
       onClick={onClick}
       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border transition-colors ${
         active
-          ? "bg-cyan-brand/10 border-cyan-brand/40 text-cyan-brand"
-          : "border-border-default text-text-muted hover:text-text-primary hover:border-gray-500"
+          ? "bg-[var(--green-3)] border-[var(--green)]/40 text-[var(--green)] font-medium"
+          : "border-[var(--border)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
       }`}
     >
       {workspace.name}
       {working > 0 && (
-        <span className="flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-cyan-brand/20 text-cyan-brand text-[10px] font-semibold">
+        <span className="flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-[var(--green)]/15 text-[var(--green)] text-[10px] font-semibold">
           {working}
         </span>
       )}
@@ -46,9 +47,9 @@ export function WorkspaceTabs() {
       <button
         onClick={() => setModalOpen(true)}
         aria-label="New workspace"
-        className="flex items-center justify-center w-7 h-7 rounded-lg text-sm border border-border-default text-text-muted hover:text-text-primary hover:border-gray-500 transition-colors"
+        className="flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--border)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
       >
-        +
+        <Plus className="w-3.5 h-3.5" />
       </button>
       {modalOpen && <NewWorkspaceModal onClose={() => setModalOpen(false)} />}
     </div>

@@ -12,7 +12,7 @@ interface AgentCardProps {
 }
 
 const INDICATOR: Record<string, string> = {
-  working: "bg-[var(--cyan)]",
+  working: "bg-[var(--green)]",
   done:    "bg-[var(--green)]",
   error:   "bg-[var(--red)]",
   idle:    "bg-[var(--border)]",
@@ -26,11 +26,11 @@ export function AgentCard({ agent, ticket, totalTokensIn = 0, totalTokensOut = 0
 
   return (
     <div className={cn(
-      "relative bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 pl-5 flex flex-col gap-3",
-      "transition-colors duration-200",
-      isError && "border-[var(--red)]/20",
+      "relative bg-white border border-[var(--border)] rounded-xl p-4 pl-5 flex flex-col gap-3 shadow-card",
+      "transition-shadow duration-200 hover:shadow-card-hover",
+      isError && "border-red-200",
     )}>
-      {/* 3px left indicator bar — pulses only when working */}
+      {/* 3px left indicator bar */}
       <span
         className={cn(
           "absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full",
@@ -44,7 +44,7 @@ export function AgentCard({ agent, ticket, totalTokensIn = 0, totalTokensOut = 0
           <PulseRing active={isWorking} error={isError} />
           <Link
             href={`/agents/${agent.id}`}
-            className="font-semibold text-sm text-[var(--text)] hover:text-[var(--cyan)] transition-colors font-mono"
+            className="font-semibold text-sm text-[var(--text)] hover:text-[var(--green)] transition-colors font-mono"
           >
             {agent.name}
           </Link>
@@ -56,16 +56,16 @@ export function AgentCard({ agent, ticket, totalTokensIn = 0, totalTokensOut = 0
 
       {ticket ? (
         <Link href={`/tickets/${ticket.id}`} className="group">
-          <div className="bg-[var(--surface-2)] rounded-lg px-3 py-2.5 border border-[var(--border)] group-hover:border-[var(--cyan)]/30 transition-colors">
+          <div className="bg-[var(--surface-2)] rounded-lg px-3 py-2.5 border border-[var(--border)] group-hover:border-[var(--green)]/30 transition-colors">
             <p className="text-xs text-[var(--text-2)] truncate group-hover:text-[var(--text)] transition-colors">
               {ticket.title}
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 h-1 bg-[var(--bg)] rounded-full overflow-hidden">
+              <div className="flex-1 h-1 bg-[var(--surface-3)] rounded-full overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-500",
-                    pct === 100 ? "bg-[var(--green)]" : "bg-[var(--cyan)]/60",
+                    pct === 100 ? "bg-[var(--green)]" : "bg-[var(--green)]/50",
                   )}
                   style={{ width: `${pct}%` }}
                 />
@@ -79,7 +79,7 @@ export function AgentCard({ agent, ticket, totalTokensIn = 0, totalTokensOut = 0
       )}
 
       {isError && (
-        <p className="text-xs text-[var(--red)] bg-[var(--red)]/10 rounded px-2 py-1">
+        <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 border border-red-200">
           last run failed
         </p>
       )}
