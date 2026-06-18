@@ -8,8 +8,10 @@ node_modules/
 dist/
 *.egg-info/
 .pytest_cache/
-.claude/worktrees/
+.claude/
 .gstack/
+CLAUDE.md
+PRODUCT.md
 backend/sdk/python/treco/_backend/
 backend/sdk/python/treco/_ui/
 frontend/out/
