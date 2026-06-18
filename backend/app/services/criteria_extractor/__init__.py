@@ -17,12 +17,14 @@ async def extract_criteria(title: str, description: str | None) -> list[dict]:
 
     prompt = _build_prompt(title, description)
 
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        return await _extract_with_anthropic(prompt)
-    if settings.llm_provider == "openai" and settings.openai_api_key:
-        return await _extract_with_openai(prompt)
+    try:
+        if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
+            return await _extract_with_anthropic(prompt)
+        if settings.llm_provider == "openai" and settings.openai_api_key:
+            return await _extract_with_openai(prompt)
+    except Exception:
+        pass
 
-    # Fallback: parse markdown checkboxes from description directly
     return _parse_checkboxes(description)
 
 

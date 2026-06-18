@@ -98,7 +98,7 @@ async def _upsert_ticket(db: AsyncSession, workspace_id: str, norm: NormalizedTi
             Ticket.source_id == norm.source_id,
         )
     )
-    existing = result.scalar_one_or_none()
+    existing = result.scalars().first()
     if existing:
         existing.title = norm.title
         existing.description = norm.description

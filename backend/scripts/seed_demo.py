@@ -128,7 +128,7 @@ class Seeder:
         print(f"Open http://localhost:3000 — workspace: {self.workspace_id}")
 
     async def _create_agent(self, name: str):
-        r = await self.client.post("/api/agents/", json={
+        r = await self.client.post("/api/agents", json={
             "workspace_id": self.workspace_id,
             "name": name,
         })
@@ -176,7 +176,7 @@ class Seeder:
                 "raw": raw,
             })
         else:
-            r = await self.client.post("/api/tickets/", json=body)
+            r = await self.client.post("/api/tickets", json=body)
 
         r.raise_for_status()
         ticket_id = r.json()["id"]
@@ -208,7 +208,7 @@ class Seeder:
                 "payload": {},
                 **kwargs,
             }
-            r2 = await self.client.post("/api/events/", json=body, headers=headers)
+            r2 = await self.client.post("/api/events", json=body, headers=headers)
             r2.raise_for_status()
 
         await emit("ticket_started", payload={"message": "Starting work on ticket"})
