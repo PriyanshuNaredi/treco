@@ -116,6 +116,10 @@ export default function LandingPage() {
             <ExternalLink className="w-4 h-4" />
             GitHub
           </a>
+          <Link href="/login"
+            className="text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-colors font-medium">
+            Sign in
+          </Link>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium bg-[var(--green)] text-white hover:bg-[var(--green-2)] transition-colors">
             Get started

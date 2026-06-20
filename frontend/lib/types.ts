@@ -85,3 +85,10 @@ export interface CostSummary {
   total_tokens_out: number;
   event_count: number;
 }
+
+export interface UserProfile {
+  id: string;
+  github_id: string;
+  login: string;
+  avatar_url: string | null;
+}
