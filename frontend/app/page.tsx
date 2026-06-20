@@ -136,13 +136,14 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-[var(--text)]">
-            See what your<br />
-            <span className="text-[var(--green)]">AI agents</span> are doing.
+            Know exactly what<br />
+            your <span className="text-[var(--green)]">agents</span> shipped.
           </h1>
 
           <p className="text-xl text-[var(--text-2)] max-w-2xl mb-10 leading-relaxed">
-            Real-time observability for AI coding agents. Live kanban, acceptance criteria tracking,
-            token cost per session. Two commands to start.
+            Connect Claude Code, Cursor, or any HTTP agent and get live kanban status,
+            acceptance criteria ticking off in real time, and per-session token cost.
+            Self-host in two commands. No account required.
           </p>
 
           <div className="flex items-center gap-4 flex-wrap">
@@ -184,10 +185,10 @@ export default function LandingPage() {
       <section className="py-24 px-6 max-w-5xl mx-auto">
         <FadeUp>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-[var(--text)]">
-            Everything in one dashboard
+            One dashboard. Every session on the record.
           </h2>
           <p className="text-[var(--text-2)] text-lg max-w-xl mb-16">
-            No polling. No manual status updates. Treco streams events directly from the agent session.
+            No polling. No manual status updates. Treco streams events directly from the agent — so you know what ran, what it cost, and whether it hit every criterion.
           </p>
         </FadeUp>
 
@@ -255,7 +256,7 @@ export default function LandingPage() {
             <Zap className="w-7 h-7 text-white" />
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-[var(--text)]">
-            Start observing your agents.
+            Ship with your agents.<br />Know what they built.
           </h2>
           <p className="text-[var(--text-2)] text-lg mb-10">
             Open source. MIT licensed. Self-host in two commands. No account required.
