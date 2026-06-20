@@ -16,3 +16,4 @@ backend/sdk/python/treco/_backend/
 backend/sdk/python/treco/_ui/
 frontend/out/
 *.tsbuildinfo
+.autopilot/
