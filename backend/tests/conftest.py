@@ -3,11 +3,20 @@ import hashlib
 import secrets
 import uuid
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.core.database import Base, get_db
+from app.core.limiter import reset_limits
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    reset_limits()
+    yield
+    reset_limits()
 from app.models.agent import Agent
 from app.models.ticket import Ticket
 from app.models.user import User

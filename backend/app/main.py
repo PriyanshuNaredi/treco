@@ -14,6 +14,7 @@ from sqlalchemy import select
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
+from app.core.limiter import RateLimitMiddleware
 
 
 def _find_ui_dir() -> Path | None:
@@ -144,6 +145,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(api_router, prefix="/api")
 
