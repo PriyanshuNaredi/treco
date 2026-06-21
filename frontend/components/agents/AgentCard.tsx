@@ -79,8 +79,12 @@ export function AgentCard({ agent, ticket, totalTokensIn = 0, totalTokensOut = 0
       )}
 
       {isError && (
-        <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 border border-red-200">
-          last run failed
+        <p
+          role="alert"
+          className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 border border-red-200 flex items-center gap-1.5"
+        >
+          <span aria-hidden="true">⚠</span>
+          Agent offline — last run failed
         </p>
       )}
     </div>

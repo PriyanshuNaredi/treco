@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Bot, Ticket, Inbox, type LucideIcon } from "lucide-react";
+import { Bot, Ticket, Inbox, WifiOff, type LucideIcon } from "lucide-react";
 
 interface EmptyStateProps {
   Icon?: LucideIcon;
@@ -70,6 +71,36 @@ export function EmptyAgentIdle() {
       title="Agent connected, waiting for a ticket"
       sub="Run treco start to assign a ticket to this agent."
       codeHint="treco start"
+    />
+  );
+}
+
+export function EmptyAgentNotFound() {
+  return (
+    <EmptyState
+      Icon={Bot}
+      title="Agent not found"
+      sub="This agent may have been deleted or does not belong to this workspace."
+      actions={
+        <Link href="/agents" className="btn-secondary text-xs">
+          ← Back to agents
+        </Link>
+      }
+    />
+  );
+}
+
+export function EmptyTicketFetchError() {
+  return (
+    <EmptyState
+      Icon={WifiOff}
+      title="Failed to load ticket"
+      sub="There was a problem reaching the server. Check your connection and try again."
+      actions={
+        <button onClick={() => window.location.reload()} className="btn-secondary text-xs">
+          Retry
+        </button>
+      }
     />
   );
 }

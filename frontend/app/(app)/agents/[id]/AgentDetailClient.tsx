@@ -9,8 +9,11 @@ import { PulseRing } from "@/components/ui/PulseRing";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { TicketEventLog } from "@/components/ticket-detail/TicketEventLog";
+import { EmptyAgentNotFound } from "@/components/ui/EmptyState";
 import { estimateCost, formatCost, formatTokens } from "@/lib/cost";
 import { toMap, toNameMap, sortChronological } from "@/lib/utils";
+import type { LogPayload } from "@/lib/types";
+import { getPayload } from "@/lib/types";
 
 export function AgentDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +40,12 @@ export function AgentDetailClient() {
 
   const chronologicalEvents = useMemo(() => sortChronological(events), [events]);
 
+  const lastErrorMessage = useMemo(() => {
+    const errorEvents = events.filter((ev) => ev.event_type === "error");
+    const last = errorEvents[errorEvents.length - 1];
+    return last ? (getPayload<LogPayload>(last).message ?? null) : null;
+  }, [events]);
+
   if (agentsLoading || eventsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -46,12 +55,7 @@ export function AgentDetailClient() {
   }
 
   if (!agent) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Link href="/agents" className="text-text-muted hover:text-text-primary text-sm">← back</Link>
-        <p className="text-text-muted text-sm">Agent not found.</p>
-      </div>
-    );
+    return <EmptyAgentNotFound />;
   }
 
   return (
@@ -66,6 +70,21 @@ export function AgentDetailClient() {
         <h1 className="text-2xl font-bold text-text-primary">{agent.name}</h1>
         <Badge label={agent.status} />
       </div>
+
+      {agent.status === "error" && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3"
+        >
+          <span aria-hidden="true" className="text-red-500 mt-0.5">⚠</span>
+          <div>
+            <p className="text-sm font-medium text-red-600">Agent offline</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {lastErrorMessage ?? "Last run ended with an error. Restart the agent to resume work."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">

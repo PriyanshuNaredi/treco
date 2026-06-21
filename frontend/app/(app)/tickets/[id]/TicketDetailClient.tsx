@@ -12,14 +12,14 @@ import { TicketEventLog } from "@/components/ticket-detail/TicketEventLog";
 import { CostPanel } from "@/components/ticket-detail/CostPanel";
 import { AssignAgentPanel } from "@/components/ticket-detail/AssignAgentPanel";
 import { criteriaProgress, toNameMap } from "@/lib/utils";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState, EmptyTicketFetchError } from "@/components/ui/EmptyState";
 import { Ticket as TicketIcon } from "lucide-react";
 
 export function TicketDetailClient() {
   const { id } = useParams<{ id: string }>();
   const { workspaceId } = useWorkspace();
 
-  const { data: ticket, isLoading: ticketLoading } = useTicket(id);
+  const { data: ticket, isLoading: ticketLoading, error: ticketError } = useTicket(id);
   const { data: events = [] } = useTicketEvents(id);
   const { data: cost } = useTicketCost(id);
   const { data: agents = [] } = useAgents(workspaceId);
@@ -35,15 +35,21 @@ export function TicketDetailClient() {
     );
   }
 
-  if (!ticket) {
-    return (
-      <EmptyState
-        Icon={TicketIcon}
-        title="Ticket not found"
-        sub="This ticket may have been deleted or you may not have access."
-      />
-    );
+  if (ticketError) {
+    const isNotFound = (ticketError as Error).message?.includes("API 404");
+    if (isNotFound) {
+      return (
+        <EmptyState
+          Icon={TicketIcon}
+          title="Ticket not found"
+          sub="This ticket may have been deleted or you may not have access."
+        />
+      );
+    }
+    return <EmptyTicketFetchError />;
   }
+
+  if (!ticket) return null;
 
   const pct = criteriaProgress(ticket.acceptance_criteria);
   const activeAgent = agents.find((a) => a.current_ticket_id === ticket.id);
