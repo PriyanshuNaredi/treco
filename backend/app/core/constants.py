@@ -6,6 +6,7 @@ class AgentStatus(str, Enum):
     WORKING = "working"
     ERROR = "error"
     AWAITING_APPROVAL = "awaiting_approval"
+    OFFLINE = "offline"
 
 
 class EventType(str, Enum):

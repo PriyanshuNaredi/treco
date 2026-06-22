@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.constants import AgentStatus
 from app.core.database import AsyncSessionLocal, init_db
 from app.core.limiter import RateLimitMiddleware
 from app.core.logging_config import configure_logging
@@ -44,13 +45,16 @@ async def _mark_stuck_agents(db: AsyncSession, cutoff: datetime) -> None:
 
     result = await db.execute(
         select(Agent)
-        .where(Agent.status == "working")
+        .where(Agent.status == AgentStatus.WORKING)
         .where(
             (Agent.last_seen_at == None) | (Agent.last_seen_at < cutoff)  # noqa: E711
         )
     )
     for agent in result.scalars().all():
-        # Don't spam — skip if we already emitted a stuck deviation recently
+        agent.status = AgentStatus.OFFLINE
+        db.add(agent)
+
+        # Don't spam deviation events if we already emitted one recently
         recent = await db.execute(
             select(AgentEvent)
             .where(AgentEvent.agent_id == agent.id)
@@ -86,7 +90,9 @@ async def _reap_dead_processes(db: AsyncSession, cutoff: datetime) -> None:
     from app.models.event import AgentEvent
 
     pid_result = await db.execute(
-        select(Agent).where(Agent.status == "working").where(Agent.pid.isnot(None))
+        select(Agent)
+        .where(Agent.status.in_([AgentStatus.WORKING, AgentStatus.OFFLINE]))
+        .where(Agent.pid.isnot(None))
     )
     for agent in pid_result.scalars().all():
         try:
