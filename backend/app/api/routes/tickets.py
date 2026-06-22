@@ -54,11 +54,18 @@ class FetchLinearIssueRequest(BaseModel):
     api_key: str
 
 
+class FetchAsanaTaskRequest(BaseModel):
+    workspace_id: str
+    task_gid: str
+    token: str
+
+
 class BulkImportRequest(_WorkspaceIdModel):
-    source: Literal["github", "linear"]
+    source: Literal["github", "linear", "asana"]
     token: str
     repo: str | None = None
     team_key: str | None = None
+    project_gid: str | None = None
     limit: int = 20
 
     @field_validator("team_key")
@@ -174,6 +181,13 @@ async def fetch_linear_issue(req: FetchLinearIssueRequest, db: AsyncSession = De
     return await _upsert_ticket(db, req.workspace_id, normalized)
 
 
+@router.post("/fetch/asana", response_model=TicketResponse)
+async def fetch_asana_task(req: FetchAsanaTaskRequest, db: AsyncSession = Depends(get_db)):
+    adapter = ADAPTERS["asana"]
+    normalized = await adapter.fetch_task(req.task_gid, req.token)
+    return await _upsert_ticket(db, req.workspace_id, normalized)
+
+
 @router.post("/fetch/bulk", response_model=list[TicketResponse])
 async def bulk_import(req: BulkImportRequest, db: AsyncSession = Depends(get_db)):
     if req.source == "github":
@@ -181,6 +195,11 @@ async def bulk_import(req: BulkImportRequest, db: AsyncSession = Depends(get_db)
             raise HTTPException(status_code=400, detail="repo is required for GitHub bulk import")
         adapter = ADAPTERS["github"]
         normalized_list = await adapter.fetch_issues(req.repo, req.token, req.limit)
+    elif req.source == "asana":
+        if not req.project_gid:
+            raise HTTPException(status_code=400, detail="project_gid is required for Asana bulk import")
+        adapter = ADAPTERS["asana"]
+        normalized_list = await adapter.fetch_tasks_by_project(req.project_gid, req.token, req.limit)
     else:
         adapter = ADAPTERS["linear"]
         normalized_list = await adapter.fetch_issues(req.team_key, req.token, req.limit)

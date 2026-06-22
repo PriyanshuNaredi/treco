@@ -3,9 +3,93 @@ import respx
 from fastapi import HTTPException
 from httpx import Response
 
+from app.services.adapters.asana import AsanaAdapter
 from app.services.adapters.github import GitHubIssueAdapter
 from app.services.adapters.jira import JiraAdapter, _extract_adf_text
 from app.services.adapters.linear import LinearAdapter
+
+
+class TestAsanaAdapter:
+    def setup_method(self):
+        self.adapter = AsanaAdapter()
+
+    def test_normalize_extracts_gid_and_name(self):
+        raw = {"gid": "111222333", "name": "Build API", "notes": "Details here", "completed": False}
+        result = self.adapter.normalize(raw)
+        assert result.source == "asana"
+        assert result.source_id == "111222333"
+        assert result.title == "Build API"
+        assert result.description == "Details here"
+        assert result.status == "open"
+
+    def test_completed_task_maps_to_done(self):
+        raw = {"gid": "999", "name": "Done task", "notes": "", "completed": True}
+        result = self.adapter.normalize(raw)
+        assert result.status == "done"
+
+    def test_empty_notes_gives_none_description(self):
+        raw = {"gid": "777", "name": "No notes", "notes": "", "completed": False}
+        result = self.adapter.normalize(raw)
+        assert result.description is None
+
+    def test_missing_notes_gives_none_description(self):
+        raw = {"gid": "888", "name": "No notes key", "completed": False}
+        result = self.adapter.normalize(raw)
+        assert result.description is None
+
+    def test_normalize_preserves_raw_body(self):
+        raw = {"gid": "123", "name": "T", "notes": None, "completed": False}
+        result = self.adapter.normalize(raw)
+        assert result.body == raw
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_fetch_task_happy_path(self):
+        payload = {"data": {"gid": "42", "name": "My task", "notes": "desc", "completed": False}}
+        respx.get("https://app.asana.com/api/1.0/tasks/42").mock(
+            return_value=Response(200, json=payload)
+        )
+        result = await self.adapter.fetch_task("42", token="tok_test")
+        assert result.source_id == "42"
+        assert result.title == "My task"
+        assert result.status == "open"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_fetch_task_sends_bearer_auth(self):
+        payload = {"data": {"gid": "1", "name": "T", "notes": None, "completed": False}}
+        route = respx.get("https://app.asana.com/api/1.0/tasks/1").mock(
+            return_value=Response(200, json=payload)
+        )
+        await self.adapter.fetch_task("1", token="mytoken")
+        assert route.calls[0].request.headers["authorization"] == "Bearer mytoken"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_fetch_task_404_raises_http_exception(self):
+        respx.get("https://app.asana.com/api/1.0/tasks/999").mock(
+            return_value=Response(404)
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await self.adapter.fetch_task("999", token="tok")
+        assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_fetch_tasks_by_project_returns_normalized_list(self):
+        payload = {
+            "data": [
+                {"gid": "10", "name": "Task A", "notes": "a", "completed": False},
+                {"gid": "11", "name": "Task B", "notes": "b", "completed": True},
+            ]
+        }
+        respx.get("https://app.asana.com/api/1.0/projects/proj1/tasks").mock(
+            return_value=Response(200, json=payload)
+        )
+        results = await self.adapter.fetch_tasks_by_project("proj1", token="tok", limit=20)
+        assert len(results) == 2
+        assert results[0].source_id == "10"
+        assert results[1].status == "done"
 
 
 class TestJiraAdapter:
