@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -16,6 +17,11 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 from app.core.limiter import RateLimitMiddleware
+from app.core.logging_config import configure_logging
+from app.core.request_id import RequestIDMiddleware
+
+_DEV_JWT_SECRET = "dev-secret-change-in-production"
+logger = logging.getLogger(__name__)
 
 
 def _find_ui_dir() -> Path | None:
@@ -131,8 +137,21 @@ async def _health_monitor() -> None:
             pass  # monitor must never crash
 
 
+def _validate_jwt_secret() -> None:
+    secret = settings.jwt_secret
+    if secret == _DEV_JWT_SECRET:
+        logger.warning("JWT_SECRET is the default dev value — set a strong secret before production")
+        return
+    if len(secret.encode()) < 32:
+        raise RuntimeError(
+            f"JWT_SECRET is {len(secret.encode())} bytes — must be >= 32 bytes for security"
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
+    _validate_jwt_secret()
     await init_db()
     monitor = asyncio.create_task(_health_monitor())
     try:
@@ -155,6 +174,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 app.include_router(api_router, prefix="/api")
 
