@@ -119,6 +119,28 @@ class TestEmitMethods:
 
     @pytest.mark.asyncio
     @respx.mock
+    async def test_pr_opened(self, client):
+        route = respx.post(f"{BASE_URL}/api/events/").mock(return_value=Response(200, json={"id": "e10"}))
+        await client.pr_opened("ticket-10", url="https://github.com/org/repo/pull/42", pr_number=42)
+        import json
+        payload = json.loads(route.calls[0].request.content)
+        assert payload["event_type"] == "pr_opened"
+        assert payload["payload"]["url"] == "https://github.com/org/repo/pull/42"
+        assert payload["payload"]["pr_number"] == 42
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_pr_opened_without_number(self, client):
+        route = respx.post(f"{BASE_URL}/api/events/").mock(return_value=Response(200, json={"id": "e11"}))
+        await client.pr_opened("ticket-11", url="https://github.com/org/repo/pull/7")
+        import json
+        payload = json.loads(route.calls[0].request.content)
+        assert payload["event_type"] == "pr_opened"
+        assert payload["payload"]["url"] == "https://github.com/org/repo/pull/7"
+        assert "pr_number" not in payload["payload"]
+
+    @pytest.mark.asyncio
+    @respx.mock
     async def test_x_agent_key_header_sent(self, client):
         route = respx.post(f"{BASE_URL}/api/events/").mock(return_value=Response(200, json={"id": "e8"}))
         await client.log("ticket-8", "check header")
