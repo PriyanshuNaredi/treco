@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,8 +15,8 @@ router = APIRouter()
 
 
 class CreateWorkspaceRequest(BaseModel):
-    name: str
-    repo_path: str
+    name: str = Field(..., description="Human-readable workspace name.", examples=["backend-team"])
+    repo_path: str = Field(..., description="Absolute path to a git repository on the server's filesystem. Validated to be an existing git repo.", examples=["/home/user/projects/backend"])
 
     @field_validator("name", "repo_path")
     @classmethod
@@ -36,8 +36,8 @@ class WorkspaceResponse(BaseModel):
 
 
 class UpdateWorkspaceRequest(BaseModel):
-    name: str | None = None
-    repo_path: str | None = None
+    name: str | None = Field(None, description="New workspace name. Omit to leave unchanged.", examples=["backend-team-v2"])
+    repo_path: str | None = Field(None, description="New repo path. Validated to be an existing git repo. Omit to leave unchanged.", examples=["/home/user/projects/backend-v2"])
 
 
 def _validate_git_repo(repo_path: str) -> Path:
@@ -55,7 +55,12 @@ def _validate_git_repo(repo_path: str) -> Path:
     return path
 
 
-@router.post("", response_model=WorkspaceResponse)
+@router.post(
+    "",
+    response_model=WorkspaceResponse,
+    summary="Create a workspace",
+    description="Create a workspace linked to a git repository path on the server. Returns 400 if the path does not exist or is not a git repository.",
+)
 async def create_workspace(
     req: CreateWorkspaceRequest,
     db: AsyncSession = Depends(get_db),
@@ -72,18 +77,33 @@ async def create_workspace(
     return workspace
 
 
-@router.get("", response_model=list[WorkspaceResponse])
+@router.get(
+    "",
+    response_model=list[WorkspaceResponse],
+    summary="List workspaces",
+    description="Return all workspaces ordered by creation time.",
+)
 async def list_workspaces(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Workspace).order_by(Workspace.created_at))
     return result.scalars().all()
 
 
-@router.get("/{workspace_id}", response_model=WorkspaceResponse)
+@router.get(
+    "/{workspace_id}",
+    response_model=WorkspaceResponse,
+    summary="Get a workspace",
+    description="Retrieve a single workspace by ID. Returns 404 if not found.",
+)
 async def get_workspace(workspace_id: str, db: AsyncSession = Depends(get_db)):
     return await get_or_404(db, Workspace, workspace_id)
 
 
-@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+@router.patch(
+    "/{workspace_id}",
+    response_model=WorkspaceResponse,
+    summary="Update a workspace",
+    description="Update `name` and/or `repo_path`. Omit any field to leave it unchanged. `repo_path` is validated as an existing git repository.",
+)
 async def update_workspace(
     workspace_id: str,
     req: UpdateWorkspaceRequest,
@@ -102,7 +122,12 @@ async def update_workspace(
     return workspace
 
 
-@router.delete("/{workspace_id}", status_code=204)
+@router.delete(
+    "/{workspace_id}",
+    status_code=204,
+    summary="Delete a workspace",
+    description="Delete a workspace by ID. Returns 204 on success, 404 if not found. Does not cascade-delete agents or tickets.",
+)
 async def delete_workspace(workspace_id: str, db: AsyncSession = Depends(get_db)):
     workspace = await get_or_404(db, Workspace, workspace_id)
     await db.delete(workspace)

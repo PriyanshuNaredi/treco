@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Header
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,13 +27,28 @@ async def _fetch_ticket(ticket_id: str, db: AsyncSession) -> "Ticket | None":
 
 
 class EventRequest(BaseModel):
-    ticket_id: str
-    event_type: Literal["ticket_started", "criterion_checked", "criterion_failed", "pr_opened", "done", "error", "log", "heartbeat", "deviation"]
-    criterion_id: str | None = None
-    tokens_in: int = 0
-    tokens_out: int = 0
-    model: str | None = None
-    payload: dict = {}
+    ticket_id: str = Field(..., description="ID of the ticket this event is associated with.", examples=["39a47894-f482-4bb2-906c-13227d2e500e"])
+    event_type: Literal["ticket_started", "criterion_checked", "criterion_failed", "pr_opened", "done", "error", "log", "heartbeat", "deviation"] = Field(
+        ...,
+        description=(
+            "Type of event. Key types:\n"
+            "- `ticket_started` — agent begins work; sets ticket status to `in_progress`\n"
+            "- `criterion_checked` — marks an acceptance criterion as done (requires `criterion_id`)\n"
+            "- `criterion_failed` — agent could not satisfy a criterion\n"
+            "- `pr_opened` — agent opened a pull request\n"
+            "- `done` — agent finished; sets ticket status to `done`\n"
+            "- `error` — agent hit an unrecoverable error\n"
+            "- `log` — free-form agent log message\n"
+            "- `heartbeat` — agent keepalive (updates `last_seen_at`)\n"
+            "- `deviation` — agent detected or was detected to be off-track"
+        ),
+        examples=["criterion_checked"],
+    )
+    criterion_id: str | None = Field(None, description="Acceptance criterion ID to mark done. Required for `criterion_checked` events.", examples=["crit-001"])
+    tokens_in: int = Field(0, description="Input tokens consumed in this LLM call.", examples=[512])
+    tokens_out: int = Field(0, description="Output tokens generated in this LLM call.", examples=[128])
+    model: str | None = Field(None, description="LLM model used for this call.", examples=["claude-haiku-4-5-20251001"])
+    payload: dict = Field(default={}, description="Arbitrary event metadata. Schema is event-type specific.")
 
 
 class EventResponse(BaseModel):
@@ -59,10 +74,19 @@ class CostSummary(BaseModel):
     event_count: int
 
 
-@router.post("")
+@router.post(
+    "",
+    summary="Post an agent event",
+    description=(
+        "Append an event to the agent event log. Authenticated by `X-Agent-Key` header. "
+        "Side effects depend on `event_type`: `ticket_started` sets ticket to `in_progress`, "
+        "`criterion_checked` marks a criterion done, `done`/`error` closes the agent run. "
+        "Events are append-only and cannot be modified or deleted."
+    ),
+)
 async def post_event(
     req: EventRequest,
-    x_agent_key: str = Header(..., alias="X-Agent-Key"),
+    x_agent_key: str = Header(..., alias="X-Agent-Key", description="Raw agent API key issued at agent creation."),
     db: AsyncSession = Depends(get_db),
 ):
     agent = await resolve_agent(x_agent_key, db)
@@ -123,7 +147,12 @@ async def post_event(
     return {"id": event.id}
 
 
-@router.get("/ticket/{ticket_id}", response_model=list[EventResponse])
+@router.get(
+    "/ticket/{ticket_id}",
+    response_model=list[EventResponse],
+    summary="List events for a ticket",
+    description="Return all events for a ticket, ordered by creation time (oldest first).",
+)
 async def get_ticket_events(ticket_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(AgentEvent)
@@ -133,7 +162,12 @@ async def get_ticket_events(ticket_id: str, db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.get("/ticket/{ticket_id}/cost", response_model=CostSummary)
+@router.get(
+    "/ticket/{ticket_id}/cost",
+    response_model=CostSummary,
+    summary="Get token cost summary for a ticket",
+    description="Aggregate `tokens_in` and `tokens_out` across all events for this ticket. Cost is computed at read time — never persisted.",
+)
 async def get_ticket_cost(ticket_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(
@@ -151,7 +185,12 @@ async def get_ticket_cost(ticket_id: str, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.get("/agent/{agent_id}", response_model=list[EventResponse])
+@router.get(
+    "/agent/{agent_id}",
+    response_model=list[EventResponse],
+    summary="List events for an agent",
+    description="Return events emitted by a specific agent, ordered by creation time (newest first). `limit` is capped at 500.",
+)
 async def get_agent_events(
     agent_id: str,
     limit: int = 200,
@@ -166,7 +205,12 @@ async def get_agent_events(
     return result.scalars().all()
 
 
-@router.get("", response_model=list[EventResponse])
+@router.get(
+    "",
+    response_model=list[EventResponse],
+    summary="List events for a workspace",
+    description="Return events for all agents in a workspace, ordered by creation time (newest first). `limit` is capped at 500.",
+)
 async def list_workspace_events(
     workspace_id: str,
     limit: int = 100,
@@ -197,7 +241,16 @@ def _event_to_dict(event: AgentEvent) -> dict[str, Any]:
     }
 
 
-@router.get("/stream")
+@router.get(
+    "/stream",
+    summary="SSE stream of workspace events",
+    description=(
+        "Server-Sent Events stream for real-time event delivery. "
+        "Bootstraps with the last 50 events on connect, then delivers new events as they arrive. "
+        "Sends a keepalive comment every 15 seconds. "
+        "Connect with `EventSource` in the browser or `httpx` with streaming enabled."
+    ),
+)
 async def event_stream(workspace_id: str, db: AsyncSession = Depends(get_db)):
     async def generator():
         result = await db.execute(

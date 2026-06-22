@@ -25,7 +25,17 @@ class BrowseResponse(BaseModel):
     entries: list[DirEntry]
 
 
-@router.get("/browse", response_model=BrowseResponse)
+@router.get(
+    "/browse",
+    response_model=BrowseResponse,
+    summary="Browse local filesystem directories",
+    description=(
+        "List subdirectories of a path on the server's filesystem. "
+        "Used by the setup UI to let users pick a repo path. "
+        "**Localhost-only** — returns 403 for any non-loopback caller. "
+        "Each entry includes `is_git_repo` to highlight valid workspace paths."
+    ),
+)
 async def browse(request: Request, path: str | None = None) -> BrowseResponse:
     _require_local(request)
     target = Path(path) if path else Path.home()

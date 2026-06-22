@@ -166,9 +166,72 @@ async def lifespan(app: FastAPI):
         monitor.cancel()
 
 
+_OPENAPI_TAGS = [
+    {
+        "name": "tickets",
+        "description": (
+            "Manage tickets from any source (Jira, Linear, Asana, GitHub Issues, or custom). "
+            "Tickets are the unit of work agents act on. Body is immutable after import; "
+            "acceptance criteria are derived by LLM on creation."
+        ),
+    },
+    {
+        "name": "agents",
+        "description": (
+            "Create and monitor agents. Each agent holds an API key (returned once on creation) "
+            "used to authenticate SDK calls via the `X-Agent-Key` header."
+        ),
+    },
+    {
+        "name": "events",
+        "description": (
+            "Append-only event stream emitted by agents. Records token usage, criterion checks, "
+            "PR links, and deviations. Cost is computed at read time from `tokens_in`/`tokens_out` sums."
+        ),
+    },
+    {
+        "name": "workspaces",
+        "description": "Workspaces group agents and tickets. Each workspace maps to a git repository on disk.",
+    },
+    {
+        "name": "init",
+        "description": (
+            "One-shot bootstrap: create a workspace + agent in a single call. "
+            "Used by `treco init` CLI command."
+        ),
+    },
+    {
+        "name": "fs",
+        "description": "Local filesystem browser for repo path selection. Localhost-only; rejects remote callers.",
+    },
+    {
+        "name": "meta",
+        "description": "Health check and service metadata.",
+    },
+]
+
 app = FastAPI(
     title="Treco",
     version="0.1.0",
+    description=(
+        "**Treco** is an open source agent observability platform.\n\n"
+        "Agents report progress on tickets in real time. "
+        "Tracks acceptance criteria, token consumption, and per-ticket cost across any ticket source "
+        "(Jira, Linear, Asana, GitHub Issues, or custom).\n\n"
+        "## Authentication\n\n"
+        "- **Agent SDK routes** (`/api/events`, agent self-lookup): `X-Agent-Key: <raw_key>` header — "
+        "key is SHA-256 hashed and matched against `agent.api_key_hash`.\n"
+        "- **Dashboard routes** (`/api/workspaces`, `/api/tickets`, etc.): no auth required in the "
+        "default single-tenant deployment.\n\n"
+        "## Key invariants\n\n"
+        "- `Ticket.body` is immutable after import.\n"
+        "- `agent_events` is append-only — no UPDATE or DELETE.\n"
+        "- Cost is computed at read time from token sums, never persisted.\n"
+        "- API keys are stored SHA-256 hashed and returned only once."
+    ),
+    contact={"name": "Treco", "url": "https://github.com/treco-dev/treco"},
+    license_info={"name": "MIT"},
+    openapi_tags=_OPENAPI_TAGS,
     lifespan=lifespan,
 )
 
@@ -185,7 +248,12 @@ app.add_middleware(RequestIDMiddleware)
 app.include_router(api_router, prefix="/api")
 
 
-@app.get("/health", tags=["meta"])
+@app.get(
+    "/health",
+    tags=["meta"],
+    summary="Service health check",
+    description="Returns `200 ok` when the API and database are reachable. Returns `503` when the database is unavailable.",
+)
 async def health() -> JSONResponse:
     db_status = "ok"
     try:

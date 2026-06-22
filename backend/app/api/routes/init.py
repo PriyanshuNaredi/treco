@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,8 +15,8 @@ router = APIRouter()
 
 
 class InitRequest(BaseModel):
-    workspace_id: str
-    agent_name: str
+    workspace_id: str = Field(..., description="Workspace ID to bootstrap. Created automatically if it does not exist yet.", examples=["ws-abc123"])
+    agent_name: str = Field(..., description="Name for the new agent. Must be unique within the workspace; returns 409 if it already exists.", examples=["agent-main"])
 
 
 class InitResponse(BaseModel):
@@ -25,7 +25,16 @@ class InitResponse(BaseModel):
     workspace_id: str
 
 
-@router.post("/", response_model=InitResponse)
+@router.post(
+    "/",
+    response_model=InitResponse,
+    summary="Bootstrap workspace and agent",
+    description=(
+        "One-shot setup used by `treco init`. Creates the workspace (if it does not exist) and mints a new agent. "
+        "Returns the agent's raw API key — **store it immediately**, it is never returned again. "
+        "Returns 409 if an agent with the same name already exists in the workspace."
+    ),
+)
 async def init_workspace(req: InitRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Agent).where(
