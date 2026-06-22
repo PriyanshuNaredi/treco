@@ -31,6 +31,7 @@ class AgentResponse(BaseModel):
     status: str
     current_ticket_id: str | None
     workspace_id: str
+    last_seen_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

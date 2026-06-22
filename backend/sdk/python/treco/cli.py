@@ -10,6 +10,7 @@ Usage:
   treco log   <message>             Log a message to the active ticket
   treco done                        End active session, mark ticket done
   treco status                      Show active session info
+  treco ps                          List all agents in workspace with status and last seen
   treco inject [ticket-id]          Write ticket context into the active agent config
   treco logs [ticket-id] [--limit N] [--follow]
                                     Stream recent events for a ticket to stdout
@@ -34,6 +35,7 @@ import os
 import re
 import socket
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -417,6 +419,67 @@ def cmd_logs(ticket_id: str = "", limit: int = 50, follow: bool = False) -> None
                     seen_ids.add(ev["id"])
     except KeyboardInterrupt:
         pass
+
+
+# ── ps ───────────────────────────────────────────────────────────────────────
+
+def _relative_time(iso: str | None) -> str:
+    if not iso:
+        return "never"
+    try:
+        ts = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        delta = int((datetime.now(timezone.utc) - ts).total_seconds())
+    except Exception:
+        return iso
+    if delta < 60:
+        return f"{delta}s ago"
+    if delta < 3600:
+        return f"{delta // 60}m ago"
+    if delta < 86400:
+        return f"{delta // 3600}h ago"
+    return f"{delta // 86400}d ago"
+
+
+def cmd_ps() -> None:
+    cfg = require_config()
+    workspace_id = _workspace_id()
+
+    try:
+        with httpx.Client(timeout=8.0) as client:
+            r = client.get(
+                f"{cfg['base_url']}/api/agents",
+                params={"workspace_id": workspace_id},
+                headers={"X-Agent-Key": cfg["api_key"]},
+            )
+            if r.status_code == 422:
+                print("workspace_id required.", file=sys.stderr)
+                sys.exit(1)
+            r.raise_for_status()
+            agents: list[dict] = r.json()
+    except httpx.HTTPStatusError as exc:
+        print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
+        sys.exit(1)
+    except httpx.RequestError as exc:
+        print(f"Connection failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if not agents:
+        print("No agents in workspace.")
+        return
+
+    name_w = max(len(a["name"]) for a in agents)
+    name_w = max(name_w, 4)
+    ticket_w = 36
+    header = f"{'NAME':<{name_w}}  {'STATUS':<9}  {'TICKET':<{ticket_w}}  LAST SEEN"
+    divider = "─" * len(header)
+    print(header)
+    print(divider)
+    for a in agents:
+        ticket = a.get("current_ticket_id") or "-"
+        last_seen = _relative_time(a.get("last_seen_at"))
+        print(f"{a['name']:<{name_w}}  {a['status']:<9}  {ticket:<{ticket_w}}  {last_seen}")
 
 
 # ── inject ────────────────────────────────────────────────────────────────────
@@ -804,6 +867,8 @@ def main():
         cmd_done()
     elif cmd == "status":
         cmd_status()
+    elif cmd == "ps":
+        cmd_ps()
     elif cmd == "inject":
         cmd_inject(args[1] if len(args) >= 2 else "")
     elif cmd == "logs":
