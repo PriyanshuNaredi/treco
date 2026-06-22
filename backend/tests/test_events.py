@@ -89,6 +89,53 @@ class TestPostEvent:
             assert a.status == "error"
 
     @pytest.mark.asyncio
+    async def test_ticket_started_sets_ticket_in_progress(self, client, agent_with_key, ticket):
+        _, raw_key = agent_with_key
+        await client.post(
+            "/api/events",
+            json={"ticket_id": ticket.id, "event_type": "ticket_started", "payload": {}},
+            headers={"X-Agent-Key": raw_key},
+        )
+        async with TestSessionLocal() as db:
+            t = await db.get(Ticket, ticket.id)
+            assert t.status == "in_progress"
+
+    @pytest.mark.asyncio
+    async def test_done_event_sets_ticket_done(self, client, agent_with_key, ticket):
+        _, raw_key = agent_with_key
+        await client.post(
+            "/api/events",
+            json={"ticket_id": ticket.id, "event_type": "done", "payload": {}},
+            headers={"X-Agent-Key": raw_key},
+        )
+        async with TestSessionLocal() as db:
+            t = await db.get(Ticket, ticket.id)
+            assert t.status == "done"
+
+    @pytest.mark.asyncio
+    async def test_done_with_unknown_ticket_id_does_not_crash(self, client, agent_with_key):
+        _, raw_key = agent_with_key
+        import uuid
+        r = await client.post(
+            "/api/events",
+            json={"ticket_id": str(uuid.uuid4()), "event_type": "done", "payload": {}},
+            headers={"X-Agent-Key": raw_key},
+        )
+        assert r.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_error_event_does_not_set_ticket_done(self, client, agent_with_key, ticket):
+        _, raw_key = agent_with_key
+        await client.post(
+            "/api/events",
+            json={"ticket_id": ticket.id, "event_type": "error", "payload": {}},
+            headers={"X-Agent-Key": raw_key},
+        )
+        async with TestSessionLocal() as db:
+            t = await db.get(Ticket, ticket.id)
+            assert t.status != "done"
+
+    @pytest.mark.asyncio
     async def test_criterion_checked_marks_done(self, client, agent_with_key, ticket):
         _, raw_key = agent_with_key
         criterion_id = ticket.acceptance_criteria[0]["id"]

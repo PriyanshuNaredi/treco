@@ -21,6 +21,11 @@ from app.services.deviation_detector import check_post_event
 router = APIRouter()
 
 
+async def _fetch_ticket(ticket_id: str, db: AsyncSession) -> "Ticket | None":
+    result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
+    return result.scalar_one_or_none()
+
+
 class EventRequest(BaseModel):
     ticket_id: str
     event_type: Literal["ticket_started", "criterion_checked", "criterion_failed", "pr_opened", "done", "error", "log", "heartbeat", "deviation"]
@@ -80,12 +85,20 @@ async def post_event(
     if req.event_type == EventType.TICKET_STARTED:
         agent.status = AgentStatus.WORKING
         agent.current_ticket_id = req.ticket_id
+        ticket = await _fetch_ticket(req.ticket_id, db)
+        if ticket:
+            ticket.status = "in_progress"
+            db.add(ticket)
     elif req.event_type in (EventType.DONE, EventType.ERROR):
         agent.status = AgentStatus.IDLE if req.event_type == EventType.DONE else AgentStatus.ERROR
         agent.current_ticket_id = None
+        if req.event_type == EventType.DONE:
+            ticket = await _fetch_ticket(req.ticket_id, db)
+            if ticket:
+                ticket.status = "done"
+                db.add(ticket)
     elif req.event_type == EventType.CRITERION_CHECKED and req.criterion_id:
-        ticket_result = await db.execute(select(Ticket).where(Ticket.id == req.ticket_id))
-        ticket = ticket_result.scalar_one_or_none()
+        ticket = await _fetch_ticket(req.ticket_id, db)
         if ticket and ticket.acceptance_criteria:
             # Deep copy required: shallow list() shares dict refs, so in-place
             # mutation of c["done"] would also mutate the "committed" state
