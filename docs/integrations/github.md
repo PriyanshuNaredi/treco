@@ -14,7 +14,24 @@ without authentication. Private repos require a personal access token.
 
 ---
 
-## Import by URL (quickest)
+## CLI (quickest)
+
+If you have the `treco` CLI installed, use these instead of raw curl:
+
+```bash
+# Bulk import up to 20 open issues from a repo (prompts for PAT)
+treco connect github
+
+# Import a single issue by URL and optionally start a session
+treco import https://github.com/owner/repo/issues/42
+```
+
+`treco connect github` saves your PAT to `~/.treco/config.json` (chmod 600) so you are not
+prompted again. `treco import <url>` reuses a stored token if one exists.
+
+---
+
+## Import by URL (API)
 
 Paste a GitHub issue URL and Treco fetches it automatically:
 

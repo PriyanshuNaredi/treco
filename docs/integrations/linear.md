@@ -12,7 +12,24 @@ API directly — you provide an API key and Treco does the rest.
 
 ---
 
-## Fetch a single issue
+## CLI (quickest)
+
+If you have the `treco` CLI installed, use these instead of raw curl:
+
+```bash
+# Bulk import up to 20 issues from a team (prompts for API key and team key)
+treco connect linear
+
+# Import a single issue by URL and optionally start a session
+treco import https://linear.app/yourorg/issue/ENG-42/issue-title
+```
+
+`treco connect linear` saves your API key to `~/.treco/config.json` (chmod 600) so you are not
+prompted again.
+
+---
+
+## Fetch a single issue (API)
 
 ```bash
 curl -s -X POST http://localhost:8001/api/tickets/fetch/linear \
