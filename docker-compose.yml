@@ -3,24 +3,36 @@ services:
     build: ./backend
     ports:
       - "8001:8001"
-    env_file: backend/.env
+    env_file:
+      - path: backend/.env
+        required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://treco:treco@db/treco
       DATABASE_MODE: postgres
+      # Override in backend/.env or set JWT_SECRET env var before running
+      JWT_SECRET: dev-secret-change-in-production
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8001
+        # http://backend:8001 is the Docker-internal address — rewrites run server-side
+        NEXT_PUBLIC_API_URL: http://backend:8001
         NEXT_PUBLIC_WORKSPACE_ID: default
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine
