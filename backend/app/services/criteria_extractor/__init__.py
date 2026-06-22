@@ -37,6 +37,15 @@ Title: {title}
 Description: {description}"""
 
 
+def _normalize_criteria(raw_json: str) -> list[dict]:
+    criteria = json.loads(_extract_json(raw_json))
+    for c in criteria:
+        if not c.get("id"):
+            c["id"] = str(uuid.uuid4())
+        c.setdefault("done", False)
+    return criteria
+
+
 async def _extract_with_anthropic(prompt: str) -> list[dict]:
     import anthropic
 
@@ -46,13 +55,7 @@ async def _extract_with_anthropic(prompt: str) -> list[dict]:
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
-    raw = message.content[0].text
-    criteria = json.loads(_extract_json(raw))
-    for c in criteria:
-        if not c.get("id"):
-            c["id"] = str(uuid.uuid4())
-        c.setdefault("done", False)
-    return criteria
+    return _normalize_criteria(message.content[0].text)
 
 
 async def _extract_with_openai(prompt: str) -> list[dict]:
@@ -64,13 +67,7 @@ async def _extract_with_openai(prompt: str) -> list[dict]:
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
     )
-    raw = response.choices[0].message.content
-    criteria = json.loads(_extract_json(raw))
-    for c in criteria:
-        if not c.get("id"):
-            c["id"] = str(uuid.uuid4())
-        c.setdefault("done", False)
-    return criteria
+    return _normalize_criteria(response.choices[0].message.content)
 
 
 def _extract_json(text: str) -> str:

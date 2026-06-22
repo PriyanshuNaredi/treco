@@ -16,6 +16,7 @@ from app.models.agent import Agent
 from app.models.event import AgentEvent
 from app.models.ticket import Ticket
 from app.services.auth import resolve_agent
+from app.services.deviation_detector import check_post_event
 
 router = APIRouter()
 
@@ -100,7 +101,6 @@ async def post_event(
     await db.commit()
 
     if req.event_type in (EventType.DONE, EventType.LOG, EventType.ERROR):
-        from app.services.deviation_detector import check_post_event
         deviations = await check_post_event(event, agent, db)
         if deviations:
             for dev in deviations:

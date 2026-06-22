@@ -109,20 +109,22 @@ async def github_callback(code: str, db: AsyncSession = Depends(get_db)) -> Redi
     return RedirectResponse(redirect_url)
 
 
+async def _resolve_user_from_header(authorization: str, db: AsyncSession) -> User:
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Bearer token required")
+    user_id = decode_jwt(authorization.removeprefix("Bearer "))
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
     authorization: str = Header(...),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Bearer token required")
-    token = authorization.removeprefix("Bearer ")
-    user_id = decode_jwt(token)
-
-    user = await db.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
+    return await _resolve_user_from_header(authorization, db)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -130,13 +132,5 @@ async def refresh_token(
     authorization: str = Header(...),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Bearer token required")
-    token = authorization.removeprefix("Bearer ")
-    user_id = decode_jwt(token)
-
-    user = await db.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-
+    user = await _resolve_user_from_header(authorization, db)
     return TokenResponse(access_token=create_jwt(user.id))

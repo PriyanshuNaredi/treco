@@ -18,21 +18,20 @@ from app.services.criteria_extractor import create_criterion, extract_criteria
 router = APIRouter()
 
 
-def _require_workspace_id(v: str) -> str:
-    if not v or not v.strip():
-        raise ValueError("workspace_id is required")
-    return v
-
-
-class ImportTicketRequest(BaseModel):
-    source: Literal["jira", "linear", "asana", "github"]
+class _WorkspaceIdModel(BaseModel):
     workspace_id: str
-    raw: dict[str, Any]
 
     @field_validator("workspace_id")
     @classmethod
     def validate_workspace_id(cls, v: str) -> str:
-        return _require_workspace_id(v)
+        if not v or not v.strip():
+            raise ValueError("workspace_id is required")
+        return v
+
+
+class ImportTicketRequest(_WorkspaceIdModel):
+    source: Literal["jira", "linear", "asana", "github"]
+    raw: dict[str, Any]
 
 
 class CreateTicketRequest(BaseModel):
@@ -55,18 +54,12 @@ class FetchLinearIssueRequest(BaseModel):
     api_key: str
 
 
-class BulkImportRequest(BaseModel):
-    workspace_id: str
+class BulkImportRequest(_WorkspaceIdModel):
     source: Literal["github", "linear"]
     token: str
     repo: str | None = None
     team_key: str | None = None
     limit: int = 20
-
-    @field_validator("workspace_id")
-    @classmethod
-    def validate_workspace_id(cls, v: str) -> str:
-        return _require_workspace_id(v)
 
     @field_validator("team_key")
     @classmethod
@@ -76,14 +69,8 @@ class BulkImportRequest(BaseModel):
         return v
 
 
-class FetchUrlRequest(BaseModel):
-    workspace_id: str
+class FetchUrlRequest(_WorkspaceIdModel):
     url: str
-
-    @field_validator("workspace_id")
-    @classmethod
-    def validate_workspace_id(cls, v: str) -> str:
-        return _require_workspace_id(v)
 
 
 class TicketResponse(BaseModel):
