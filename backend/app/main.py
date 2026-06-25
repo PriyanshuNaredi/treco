@@ -17,7 +17,6 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.constants import AgentStatus
 from app.core.database import AsyncSessionLocal, init_db
-from app.core.limiter import RateLimitMiddleware
 from app.core.logging_config import configure_logging
 from app.core.request_id import RequestIDMiddleware
 
@@ -242,7 +241,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 app.include_router(api_router, prefix="/api")

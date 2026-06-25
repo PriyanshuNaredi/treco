@@ -16,19 +16,16 @@ See what your agents are doing, track acceptance criteria, measure token spend p
 
 | Feature | Status |
 |---------|--------|
-| CLI — `treco init / new / start / done / check / log / status / ps / logs` | ✅ |
+| CLI — `treco init / new / start / done / check / log / status` | ✅ |
 | Dashboard — agent board, live event feed, ticket detail, cost panel | ✅ |
 | Claude Code hooks (auto token capture, session start/stop) | ✅ |
 | Python SDK — `TrecoClient` with typed helpers for all event types | ✅ |
-| Import from GitHub Issues, Linear, Jira, Asana | ✅ |
+| Import tickets from GitHub Issues, Linear, Jira, Asana (via UI) | ✅ |
 | Acceptance criteria extraction via LLM (Anthropic / OpenAI) | ✅ |
 | SQLite (default) and PostgreSQL | ✅ |
-| Docker Compose — one-command full stack | ✅ |
-| `treco server start` — pip-only, no Node required | ✅ |
+| `treco server start` — pip-only, no Node or Docker required | ✅ |
 | Agent heartbeat timeout (marks offline after 5 min silence) | ✅ |
-| Rate limiting (100 req/min per IP, 1000 per API key) | ✅ |
-| Dark mode | ✅ |
-| Multi-user / auth | ❌ OSS version is single-tenant, no login required |
+| Multi-user / auth | ❌ Single-tenant, no login required |
 
 ---
 
@@ -38,10 +35,9 @@ See what your agents are doing, track acceptance criteria, measure token spend p
 
 ```bash
 pip install "treco[server]"
-treco server start        # starts backend + opens dashboard at http://localhost:8001
-treco init                # registers workspace and agent, wires Claude Code hooks
+treco server start   # starts backend + opens dashboard at http://localhost:8001
+treco init           # registers workspace and agent, wires Claude Code hooks
 treco new "Fix the login bug"
-# answer Y to start tracking
 claude "fix the login bug per the acceptance criteria"
 treco done
 ```
@@ -100,16 +96,10 @@ treco init                          Interactive setup — workspace, agent, Clau
 treco new [title]                   Create a ticket (prompts if no title given)
 treco start [ticket-id]             Start tracking a ticket (shows picker if no id)
 treco check <criterion-id>          Mark an acceptance criterion done
-treco fail  <criterion-id>          Mark an acceptance criterion failed
 treco log   <message>               Log a message to the active ticket
 treco done                          End session, mark ticket done
 treco status                        Show active session info
-treco ps                            List all agents in workspace with status and last seen
-treco logs [ticket-id] [--limit N]  Stream recent events for a ticket to stdout
-
-treco import <url>                  Import a ticket by GitHub or Linear URL
-treco connect github                Bulk import open issues from GitHub
-treco connect linear                Bulk import issues from Linear
+treco inject [ticket-id]            Write ticket context into your agent config file
 
 treco server start [--port N]       Start backend daemon + open dashboard in browser
 treco server stop                   Stop the background server
@@ -140,16 +130,9 @@ Full reference: [docs/sdk-python.md](docs/sdk-python.md)
 
 ## Importing tickets
 
-```bash
-# Single ticket from URL (prompts for token on first use)
-treco import https://github.com/org/repo/issues/42
-treco import https://linear.app/team/issue/ENG-123
+Import from Jira, Linear, GitHub Issues, or Asana via the dashboard UI. Paste the ticket URL and connect your API token — criteria are extracted automatically.
 
-# Custom ticket — no external service needed
-treco new "My ticket title"
-```
-
-Acceptance criteria are extracted from the description via LLM on import (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), or parsed from markdown checkboxes (`- [ ] criterion text`). Without either, add criteria interactively via `treco new`.
+For quick manual tickets: `treco new "Ticket title"` from the CLI.
 
 ---
 

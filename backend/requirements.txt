@@ -13,4 +13,3 @@ anthropic>=0.28.0
 openai>=1.30.0
 alembic>=1.13
 aiofiles>=23.0.0
-slowapi>=0.1.9
