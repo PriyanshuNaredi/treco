@@ -42,7 +42,7 @@ export function TerminalLog({ events, agentNames = {}, maxLines = 200 }: Termina
       aria-label="Live event stream"
       aria-live="polite"
       aria-relevant="additions"
-      className="font-mono text-xs bg-[#070b13] rounded-xl border border-border-default h-full overflow-y-auto p-3 space-y-0.5"
+      className="font-mono text-xs bg-[var(--surface-2)] rounded-xl border border-[var(--border)] h-full overflow-y-auto p-3 space-y-0.5"
     >
       {lines.length === 0 && (
         <p className="text-text-muted opacity-50 text-center py-8">no events yet</p>

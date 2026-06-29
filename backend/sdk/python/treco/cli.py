@@ -6,18 +6,10 @@ Usage:
   treco new [title]                 Create a new ticket (prompts if no title given)
   treco start [ticket-id]           Start tracking a ticket (picker if no id given)
   treco check <criterion-id>        Mark a criterion done (uses active session)
-  treco fail  <criterion-id>        Mark a criterion failed
   treco log   <message>             Log a message to the active ticket
   treco done                        End active session, mark ticket done
   treco status                      Show active session info
-  treco ps                          List all agents in workspace with status and last seen
   treco inject [ticket-id]          Write ticket context into the active agent config
-  treco logs [ticket-id] [--limit N] [--follow]
-                                    Stream recent events for a ticket to stdout
-
-  treco connect github              Import open issues from GitHub via PAT
-  treco connect linear              Import open issues from Linear via API key
-  treco import <url>                Import a single issue by URL (GitHub or Linear)
 
   treco server start [--port N]     Start the backend + open dashboard in browser
   treco server stop                 Stop the background server
@@ -30,13 +22,11 @@ Usage:
 """
 
 import asyncio
-import getpass
 import json
 import os
 import re
 import socket
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -219,8 +209,8 @@ def cmd_init():
     print(f"  Dashboard: {base_url}  (if server is running)")
     print("  Claude Code hooks installed")
     print("\nNext steps:")
-    print("  treco import <github-issue-url>")
-    print("  treco start")
+    print("  treco new        — create a ticket")
+    print("  treco start      — start tracking")
 
 
 def cmd_new(title: str = ""):
@@ -321,14 +311,6 @@ def cmd_check(criterion_id: str):
     print(f"Criterion {criterion_id} checked")
 
 
-def cmd_fail(criterion_id: str, reason: str = ""):
-    cfg = require_config()
-    s = require_session()
-    asyncio.run(post_event(cfg, s["ticket_id"], "criterion_failed",
-                           criterion_id=criterion_id, payload={"reason": reason}))
-    print(f"Criterion {criterion_id} failed")
-
-
 def cmd_log(message: str):
     cfg = require_config()
     s = require_session()
@@ -353,134 +335,6 @@ def cmd_status():
         print(f"Ticket:     {s['ticket_id']}")
         print(f"Tokens in:  {s.get('tokens_in', 0):,}")
         print(f"Tokens out: {s.get('tokens_out', 0):,}")
-
-
-def _format_event(event: dict) -> str:
-    ts = event.get("created_at", "")[:19].replace("T", " ")
-    etype = event.get("event_type", "")
-    payload = event.get("payload") or {}
-    message = payload.get("message", "")
-    tokens_in = event.get("tokens_in", 0)
-    tokens_out = event.get("tokens_out", 0)
-    token_str = f"  [{tokens_in}↑ {tokens_out}↓]" if tokens_in or tokens_out else ""
-    detail = f"  {message}" if message else ""
-    return f"{ts}  {etype:<20}{detail}{token_str}"
-
-
-def cmd_logs(ticket_id: str = "", limit: int = 50, follow: bool = False) -> None:
-    cfg = require_config()
-    if not ticket_id:
-        s = load_session()
-        ticket_id = s.get("ticket_id", "")
-    if not ticket_id:
-        print("No ticket ID. Pass one or start a session.", file=sys.stderr)
-        sys.exit(1)
-
-    url = f"{cfg['base_url']}/api/events/ticket/{ticket_id}"
-    headers = {"X-Agent-Key": cfg["api_key"]}
-
-    try:
-        with httpx.Client(timeout=8.0) as client:
-            r = client.get(url, headers=headers)
-            if r.status_code == 404:
-                print(f"Ticket not found: {ticket_id}", file=sys.stderr)
-                sys.exit(1)
-            r.raise_for_status()
-            events: list[dict] = r.json()
-    except httpx.HTTPStatusError as exc:
-        print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-        sys.exit(1)
-    except httpx.RequestError as exc:
-        print(f"Connection failed: {exc}", file=sys.stderr)
-        sys.exit(1)
-
-    shown = events[-limit:] if len(events) > limit else events
-    for ev in shown:
-        print(_format_event(ev))
-
-    if not follow:
-        return
-
-    seen_ids: set[str] = {ev["id"] for ev in events}
-
-    try:
-        while True:
-            import time
-            time.sleep(2)
-            try:
-                with httpx.Client(timeout=8.0) as client:
-                    r = client.get(url, headers=headers)
-                    r.raise_for_status()
-                    fresh: list[dict] = r.json()
-            except Exception:
-                continue
-            for ev in fresh:
-                if ev["id"] not in seen_ids:
-                    print(_format_event(ev))
-                    seen_ids.add(ev["id"])
-    except KeyboardInterrupt:
-        pass
-
-
-# ── ps ───────────────────────────────────────────────────────────────────────
-
-def _relative_time(iso: str | None) -> str:
-    if not iso:
-        return "never"
-    try:
-        ts = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        delta = int((datetime.now(timezone.utc) - ts).total_seconds())
-    except Exception:
-        return iso
-    if delta < 60:
-        return f"{delta}s ago"
-    if delta < 3600:
-        return f"{delta // 60}m ago"
-    if delta < 86400:
-        return f"{delta // 3600}h ago"
-    return f"{delta // 86400}d ago"
-
-
-def cmd_ps() -> None:
-    cfg = require_config()
-    workspace_id = _workspace_id()
-
-    try:
-        with httpx.Client(timeout=8.0) as client:
-            r = client.get(
-                f"{cfg['base_url']}/api/agents",
-                params={"workspace_id": workspace_id},
-                headers={"X-Agent-Key": cfg["api_key"]},
-            )
-            if r.status_code == 422:
-                print("workspace_id required.", file=sys.stderr)
-                sys.exit(1)
-            r.raise_for_status()
-            agents: list[dict] = r.json()
-    except httpx.HTTPStatusError as exc:
-        print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-        sys.exit(1)
-    except httpx.RequestError as exc:
-        print(f"Connection failed: {exc}", file=sys.stderr)
-        sys.exit(1)
-
-    if not agents:
-        print("No agents in workspace.")
-        return
-
-    name_w = max(len(a["name"]) for a in agents)
-    name_w = max(name_w, 4)
-    ticket_w = 36
-    header = f"{'NAME':<{name_w}}  {'STATUS':<9}  {'TICKET':<{ticket_w}}  LAST SEEN"
-    divider = "─" * len(header)
-    print(header)
-    print(divider)
-    for a in agents:
-        ticket = a.get("current_ticket_id") or "-"
-        last_seen = _relative_time(a.get("last_seen_at"))
-        print(f"{a['name']:<{name_w}}  {a['status']:<9}  {ticket:<{ticket_w}}  {last_seen}")
 
 
 # ── inject ────────────────────────────────────────────────────────────────────
@@ -576,141 +430,6 @@ def cmd_inject(ticket_id: str = "", criteria: list[dict] | None = None):
         target.write_text(_replace_or_append(existing, "## Active Treco Ticket", section))
 
     print(f"Injected into {target}")
-
-
-# ── connect / import ──────────────────────────────────────────────────────────
-
-def cmd_connect_github():
-    cfg = load_config()
-    base_url = cfg.get("base_url") or os.environ.get("TRECO_URL", "http://localhost:8001")
-    workspace_id = _workspace_id()
-
-    if not cfg.get("github_token"):
-        print("Create a GitHub PAT with 'repo' scope:")
-        print("  https://github.com/settings/tokens/new?scopes=repo&description=Treco")
-        print()
-    token = cfg.get("github_token") or getpass.getpass("GitHub Personal Access Token: ").strip()
-    if not token:
-        print("Token required.", file=sys.stderr)
-        sys.exit(1)
-    cfg["github_token"] = token
-    save_config(cfg)
-
-    repo = input("Repository (owner/repo): ").strip()
-    if not repo:
-        print("Repository required.", file=sys.stderr)
-        sys.exit(1)
-
-    print("Fetching open issues...")
-    try:
-        tickets = asyncio.run(post_json(base_url, "/api/tickets/fetch/bulk", {
-            "workspace_id": workspace_id, "source": "github",
-            "token": token, "repo": repo, "limit": 20,
-        }))
-    except httpx.HTTPStatusError as exc:
-        print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-        sys.exit(1)
-
-    count = len(tickets)
-    answer = input(f"Found {count} issues. Import all? [Y/n]: ").strip().lower()
-    if answer in ("n", "no"):
-        print("Aborted.")
-        return
-    print(f"Imported {count} tickets.")
-
-
-def cmd_connect_linear():
-    cfg = load_config()
-    base_url = cfg.get("base_url") or os.environ.get("TRECO_URL", "http://localhost:8001")
-    workspace_id = _workspace_id()
-
-    api_key = cfg.get("linear_api_key") or getpass.getpass("Linear API Key: ").strip()
-    if not api_key:
-        print("API key required.", file=sys.stderr)
-        sys.exit(1)
-    cfg["linear_api_key"] = api_key
-    save_config(cfg)
-
-    team_key = input("Team key (e.g. ENG, blank for all): ").strip() or None
-    print("Fetching issues...")
-    body: dict = {"workspace_id": workspace_id, "source": "linear", "token": api_key, "limit": 20}
-    if team_key:
-        body["team_key"] = team_key
-
-    try:
-        tickets = asyncio.run(post_json(base_url, "/api/tickets/fetch/bulk", body))
-    except httpx.HTTPStatusError as exc:
-        print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-        sys.exit(1)
-
-    count = len(tickets)
-    answer = input(f"Found {count} issues. Import all? [Y/n]: ").strip().lower()
-    if answer in ("n", "no"):
-        print("Aborted.")
-        return
-    print(f"Imported {count} tickets.")
-
-
-def _parse_github_url(url: str) -> tuple[str, int] | None:
-    m = re.match(r"https?://github\.com/([^/]+/[^/]+)/issues/(\d+)", url)
-    return (m.group(1), int(m.group(2))) if m else None
-
-
-def _parse_linear_url(url: str) -> str | None:
-    m = re.search(r"/issue/([A-Z]+-\d+)", url)
-    return m.group(1) if m else None
-
-
-def cmd_import_url(url: str):
-    cfg = load_config()
-    base_url = cfg.get("base_url") or os.environ.get("TRECO_URL", "http://localhost:8001")
-    workspace_id = _workspace_id()
-
-    github = _parse_github_url(url)
-    linear = _parse_linear_url(url)
-
-    if github:
-        repo, issue_number = github
-        token = cfg.get("github_token") or getpass.getpass("GitHub PAT: ").strip()
-        if not token:
-            print("Token required.", file=sys.stderr)
-            sys.exit(1)
-        cfg["github_token"] = token
-        save_config(cfg)
-        try:
-            ticket = asyncio.run(post_json(base_url, "/api/tickets/fetch/github", {
-                "workspace_id": workspace_id, "repo": repo,
-                "issue_number": issue_number, "token": token,
-            }))
-        except httpx.HTTPStatusError as exc:
-            print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-            sys.exit(1)
-
-    elif linear:
-        api_key = cfg.get("linear_api_key") or getpass.getpass("Linear API Key: ").strip()
-        if not api_key:
-            print("API key required.", file=sys.stderr)
-            sys.exit(1)
-        cfg["linear_api_key"] = api_key
-        save_config(cfg)
-        try:
-            ticket = asyncio.run(post_json(base_url, "/api/tickets/fetch/linear", {
-                "workspace_id": workspace_id, "issue_id": linear, "api_key": api_key,
-            }))
-        except httpx.HTTPStatusError as exc:
-            print(f"Error {exc.response.status_code}: {exc.response.text}", file=sys.stderr)
-            sys.exit(1)
-
-    else:
-        print(f"Unrecognized URL: {url}", file=sys.stderr)
-        sys.exit(1)
-
-    source_id = ticket.get("source_id") or ticket.get("id", "")
-    print(f"Imported: [{source_id}] {ticket.get('title', '')}")
-
-    answer = input("Start a session on this ticket? [Y/n]: ").strip().lower()
-    if answer not in ("n", "no"):
-        _do_start(require_config(), ticket["id"])
 
 
 # ── server ────────────────────────────────────────────────────────────────────
@@ -868,44 +587,14 @@ def main():
         cmd_start(args[1] if len(args) >= 2 else "")
     elif cmd == "check" and len(args) >= 2:
         cmd_check(args[1])
-    elif cmd == "fail" and len(args) >= 2:
-        cmd_fail(args[1], " ".join(args[2:]))
     elif cmd == "log" and len(args) >= 2:
         cmd_log(" ".join(args[1:]))
     elif cmd == "done":
         cmd_done()
     elif cmd == "status":
         cmd_status()
-    elif cmd == "ps":
-        cmd_ps()
     elif cmd == "inject":
         cmd_inject(args[1] if len(args) >= 2 else "")
-    elif cmd == "logs":
-        rest = args[1:]
-        ticket_id = ""
-        limit = 50
-        follow = False
-        i = 0
-        while i < len(rest):
-            if rest[i] in ("--follow", "-f"):
-                follow = True
-            elif rest[i] == "--limit" and i + 1 < len(rest):
-                try:
-                    limit = int(rest[i + 1])
-                except ValueError:
-                    print("--limit requires an integer", file=sys.stderr)
-                    sys.exit(1)
-                i += 1
-            elif not rest[i].startswith("-"):
-                ticket_id = rest[i]
-            i += 1
-        cmd_logs(ticket_id, limit, follow)
-    elif cmd == "connect" and len(args) >= 2:
-        {"github": cmd_connect_github, "linear": cmd_connect_linear}.get(
-            args[1], lambda: print(f"Unknown provider: {args[1]}", file=sys.stderr) or sys.exit(1)
-        )()
-    elif cmd == "import" and len(args) >= 2:
-        cmd_import_url(args[1])
     elif cmd == "server" and len(args) >= 2:
         cmd_server(args[1:])
     elif cmd == "hook" and len(args) >= 2:
